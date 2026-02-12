@@ -31,17 +31,63 @@ cd build
 
 # Configure and build
 cmake ..
-make
+make citysorter
+```
 
 # Run the program
 ./citysorter
 ```
 
+## Testing
+
+### Building and Running Tests
+
+```bash
+# From the project root directory
+cd build
+make test
+
+# Or run through CTest for integration with CI/CD
+cd build
+ctest --verbose
+```
+
 ## Project Structure
 
+The project follows a modular architecture with clear separation of concerns:
+
 ```
-TODO
+CitySorter/
+├── include/              # Public header files
+│   ├── bst.h            # BST interface
+│   └── README.md        # Header documentation
+├── src/                 # Source code
+│   ├── cli/            # User Interface Layer
+│   │   └── main.c      # CLI implementation
+│   ├── connectors/     # API Integration Layer
+│   │   └── README.md   # Connector documentation
+│   ├── models/         # Data Models Layer
+│   │   └── README.md   # Model documentation
+│   └── core/           # Core Business Logic
+│       └── bst.c       # BST implementation
+├── tests/              # Test suite
+│   ├── unit/          # Unit tests
+│   │   └── test_bst.c # BST unit tests (28 tests)
+│   ├── integration/   # Integration tests
+│   └── e2e/           # End-to-end tests
+├── build/             # Build artifacts (generated)
+├── CMakeLists.txt     # CMake build configuration
+└── README.md          # This file
 ```
+
+### Architecture Layers
+
+1. **CLI Layer** (`src/cli/`): Handles user interaction and input sanitization
+2. **Connectors Layer** (`src/connectors/`): Manages external API communication with rate limiting and retry logic
+3. **Models Layer** (`src/models/`): Defines data structures and handles JSON parsing/validation
+4. **Core Layer** (`src/core/`): Implements core algorithms and business logic (BST operations)
+
+Each layer has its own README with detailed documentation.
 
 ## Implementation Details
 
