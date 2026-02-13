@@ -58,3 +58,6 @@ Makefile.bak
 # Temporary files
 *.tmp
 *.temp
+
+# Ctest folder
+Testing/

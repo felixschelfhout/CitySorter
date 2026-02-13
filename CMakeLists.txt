@@ -55,9 +55,14 @@ install(TARGETS citysorter DESTINATION bin)
 # Enable testing
 enable_testing()
 
+# Find CUnit for unit testing
+find_library(CUNIT_LIBRARY NAMES cunit libcunit cunitlib REQUIRED)
+find_path(CUNIT_INCLUDE_DIR NAMES CUnit/CUnit.h)
+
 # Unit Tests
 add_executable(test_bst tests/unit/test_bst.c src/core/bst.c)
-target_include_directories(test_bst PRIVATE ${PROJECT_SOURCE_DIR}/include)
+target_include_directories(test_bst PRIVATE ${PROJECT_SOURCE_DIR}/include ${CUNIT_INCLUDE_DIR})
+target_link_libraries(test_bst ${CUNIT_LIBRARY})
 
 # Add tests to CTest
 add_test(NAME BSTUnitTests COMMAND test_bst)

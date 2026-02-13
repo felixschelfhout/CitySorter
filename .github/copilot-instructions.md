@@ -24,3 +24,9 @@ Detailed description (if necessary)```
   - `feat(api): Add support for new endpoint`
   - `fix(cli): Handle edge case for empty input`
 - Use the `feat` prefix for new features and the `fix` prefix for bug fixes.
+
+# Quality assurance
+before committing code:
+- Run linters and formatters.
+- Run tests
+- Indicate code coverage in README.md

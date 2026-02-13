@@ -19,7 +19,7 @@ An interactive command-line that looks up all cities of your favourite countries
 
 ```bash
 sudo apt-get update
-sudo apt-get install build-essential cmake libcurl4-openssl-dev libcjson-dev
+sudo apt-get install build-essential cmake libcurl4-openssl-dev libcjson-dev libcunit1 libcunit1-dev
 ```
 
 ## Building
@@ -88,6 +88,45 @@ CitySorter/
 4. **Core Layer** (`src/core/`): Implements core algorithms and business logic (BST operations)
 
 Each layer has its own README with detailed documentation.
+
+### Architecture Diagram
+
+```mermaid
+graph TB
+    subgraph "User Interface Layer"
+        CLI[CLI Module<br/>src/cli/]
+    end
+    
+    subgraph "Core Business Logic"
+        CORE[Core Module<br/>BST Operations<br/>src/core/]
+    end
+    
+    subgraph "Data Layer"
+        MODELS[Models Module<br/>Data Structures<br/>JSON Parsing<br/>src/models/]
+    end
+    
+    subgraph "External Integration"
+        CONN[Connectors Module<br/>API Clients<br/>Rate Limiting<br/>src/connectors/]
+    end
+    
+    subgraph "External Services"
+        API[CountriesNow API]
+    end
+    
+    CLI -->|Commands| CORE
+    CLI -->|Display| User((User))
+    User -->|Input| CLI
+    CORE -->|Uses| MODELS
+    CONN -->|Fetches| API
+    CONN -->|Returns| MODELS
+    MODELS -->|Provides Data| CORE
+    
+    style CLI fill:#e1f5ff
+    style CORE fill:#fff4e1
+    style MODELS fill:#f0e1ff
+    style CONN fill:#e1ffe1
+    style API fill:#ffe1e1
+```
 
 ## Implementation Details
 

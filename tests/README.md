@@ -48,21 +48,14 @@ Simulate complete user workflows.
 ## Running Tests
 
 ```bash
-# Build all tests
+# Build all executables and tests
 cmake -B build
 cmake --build build
-
-# Run unit tests
-./build/tests/unit/test_bst
 
 # Run all tests via CTest
 cd build
 ctest --verbose
 
-# Run specific test suite
-ctest -R "unit"
-ctest -R "integration"
-ctest -R "e2e"
 ```
 
 ## Test Coverage
