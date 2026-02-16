@@ -19,7 +19,7 @@ An interactive command-line that looks up all cities of your favourite countries
 
 ```bash
 sudo apt-get update
-sudo apt-get install build-essential cmake libcurl4-openssl-dev libcjson-dev libcunit1 libcunit1-dev
+sudo apt-get install build-essential cmake libcurl4-openssl-dev libcjson-dev check pkg-config libsubunit-dev
 ```
 
 ## Building
@@ -40,16 +40,21 @@ make citysorter
 
 ## Testing
 
+The project uses the **Check** testing framework for unit tests and **CTest** for test execution.
+
 ### Building and Running Tests
 
 ```bash
-# From the project root directory
+# Build all tests
 cd build
-make test
+make
 
-# Or run through CTest for integration with CI/CD
-cd build
+# Run all tests via CTest
+ctest --output-on-failure
+
+# See unit test cases
 ctest --verbose
+
 ```
 
 ## Project Structure
@@ -58,34 +63,39 @@ The project follows a modular architecture with clear separation of concerns:
 
 ```
 CitySorter/
-├── include/              # Public header files
-│   ├── bst.h            # BST interface
-│   └── README.md        # Header documentation
-├── src/                 # Source code
+├── source/              # Source code
 │   ├── cli/            # User Interface Layer
-│   │   └── main.c      # CLI implementation
+│   │   ├── main.c      # CLI implementation
+│   │   └── version.h.in # Version header template
 │   ├── connectors/     # API Integration Layer
 │   │   └── README.md   # Connector documentation
 │   ├── models/         # Data Models Layer
 │   │   └── README.md   # Model documentation
 │   └── core/           # Core Business Logic
-│       └── bst.c       # BST implementation
-├── tests/              # Test suite
-│   ├── unit/          # Unit tests
-│   │   └── test_bst.c # BST unit tests (28 tests)
+│       ├── bst/        # Binary Search Tree module
+│       │   ├── include/    # BST public headers
+│       │   │   └── bst.h   # BST interface
+│       │   ├── source/     # BST implementation
+│       │   │   └── bst.c   # BST implementation
+│       │   ├── test/       # BST unit tests
+│       │   │   └── test_bst.c # Check framework tests (28 tests)
+│       │   └── CMakeLists.txt # BST build configuration
+│       └── README.md   # Core module documentation
+├── tests/              # Integration & E2E tests
 │   ├── integration/   # Integration tests
-│   └── e2e/           # End-to-end tests
+│   ├── e2e/           # End-to-end tests
+│   └── README.md      # Test documentation
 ├── build/             # Build artifacts (generated)
-├── CMakeLists.txt     # CMake build configuration
+├── CMakeLists.txt     # Root CMake build configuration
 └── README.md          # This file
 ```
 
 ### Architecture Layers
 
-1. **CLI Layer** (`src/cli/`): Handles user interaction and input sanitization
-2. **Connectors Layer** (`src/connectors/`): Manages external API communication with rate limiting and retry logic
-3. **Models Layer** (`src/models/`): Defines data structures and handles JSON parsing/validation
-4. **Core Layer** (`src/core/`): Implements core algorithms and business logic (BST operations)
+1. **CLI Layer** (`source/cli/`): Handles user interaction and input sanitization
+2. **Connectors Layer** (`source/connectors/`): Manages external API communication with rate limiting and retry logic
+3. **Models Layer** (`source/models/`): Defines data structures and handles JSON parsing/validation
+4. **Core Layer** (`source/core/`): Implements core algorithms and business logic (BST operations)
 
 Each layer has its own README with detailed documentation.
 
@@ -94,19 +104,19 @@ Each layer has its own README with detailed documentation.
 ```mermaid
 graph TB
     subgraph "User Interface Layer"
-        CLI[CLI Module<br/>src/cli/]
+        CLI[CLI Module<br/>source/cli/]
     end
     
     subgraph "Core Business Logic"
-        CORE[Core Module<br/>BST Operations<br/>src/core/]
+        CORE[Core Module<br/>BST Operations<br/>source/core/]
     end
     
     subgraph "Data Layer"
-        MODELS[Models Module<br/>Data Structures<br/>JSON Parsing<br/>src/models/]
+        MODELS[Models Module<br/>Data Structures<br/>JSON Parsing<br/>source/models/]
     end
     
     subgraph "External Integration"
-        CONN[Connectors Module<br/>API Clients<br/>Rate Limiting<br/>src/connectors/]
+        CONN[Connectors Module<br/>API Clients<br/>Rate Limiting<br/>source/connectors/]
     end
     
     subgraph "External Services"
@@ -134,6 +144,7 @@ graph TB
 
 - **libcurl**: For making HTTP requests to the CountriesNow API
 - **cJSON**: For parsing JSON responses and extracting city data
+- **Check**: Unit testing framework with excellent isolation and CTest integration
 - **Standard C Library**: For memory management, I/O, and string operations
 
 ### Data Structure

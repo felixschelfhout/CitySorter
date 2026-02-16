@@ -1,73 +1,57 @@
-cmake_minimum_required(VERSION 3.10)
-project(CitySorter VERSION 1.0.0 LANGUAGES C)
+cmake_minimum_required(VERSION 3.28)
 
-# Set C standard
-set(CMAKE_C_STANDARD 11)
-set(CMAKE_C_STANDARD_REQUIRED ON)
-
-# Compiler flags
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra")
-
-# Include directories
-include_directories(${PROJECT_SOURCE_DIR}/include)
-
-# Find required packages
-find_package(CURL REQUIRED)
-find_package(cJSON REQUIRED)
-
-# Source files organized by module
-set(CORE_SOURCES
-    src/core/bst.c
+project(
+    citysorter
+    VERSION 0.1.0
+    DESCRIPTION "Discover all cities of the countries of your dreams - neatly sorted in a binary search tree"
+    HOMEPAGE_URL "https://github.com/felixschelfhout/CitySorter"
+    LANGUAGES C
 )
 
-set(CLI_SOURCES
-    src/cli/main.c
-)
+# specify the C++ standard
+set(CMAKE_CXX_STANDARD 98)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-set(CONNECTOR_SOURCES
-    # Future: API connector implementations
-)
+# Generate ${PROJECT_BINARY_DIR}/include/version.h from version.h.in
+configure_file(source/cli/version.h.in include/version.h)
+list(APPEND EXTRA_INCLUDES ${PROJECT_BINARY_DIR}/include)
 
-set(MODEL_SOURCES
-    # Future: Data model implementations
-)
+# Configure the Binary Sort Tree library
+add_subdirectory(source/core/bst)
+list(APPEND EXTRA_LIBS BinarySortTree)
 
-# All application sources
-set(APP_SOURCES
-    ${CLI_SOURCES}
-    ${CORE_SOURCES}
-    ${CONNECTOR_SOURCES}
-    ${MODEL_SOURCES}
-)
+# Create Application
+add_executable(citysorter)
 
-# Create executable
-add_executable(citysorter ${APP_SOURCES})
+# Set Application sources
+target_sources(citysorter PRIVATE source/cli/main.c)
 
-# Link libraries
-target_link_libraries(citysorter CURL::libcurl cjson)
+# Set Application required libraries
+## https://github.com/Kitware/CMake/blob/master/Modules/FindCURL.cmake 
+find_package(CURL 8.5.0 REQUIRED COMPONENTS HTTPS SSL) 
+target_link_libraries(citysorter CURL::libcurl)
+## /usr/lib/x86_64-linux-gnu/cmake/cJSON/cJSONConfig.cmake
+find_package(cJSON 1.7.17 REQUIRED) 
+target_link_libraries(citysorter ${CJSON_LIBRARY})
+## Local libraries
+target_link_libraries(citysorter ${EXTRA_LIBS})
 
-# Set include directories for target
+# Set Application compiler flags
+target_compile_features(citysorter PRIVATE c_std_99)
+target_compile_options(citysorter PRIVATE -Wall -Wextra -Wpedantic)
+
+# Set Application include directories
 target_include_directories(citysorter PRIVATE ${PROJECT_SOURCE_DIR}/include)
+## Local include directories
+target_include_directories(citysorter PRIVATE ${EXTRA_INCLUDES})
 
-# Installation
-install(TARGETS citysorter DESTINATION bin)
-
-# Enable testing
+# Test the Application
 enable_testing()
+add_test(NAME citysorter_runs COMMAND citysorter)
+add_test(NAME citysorter_version COMMAND citysorter --version)
+set_tests_properties(citysorter_version PROPERTIES PASS_REGULAR_EXPRESSION "citysorter ${PROJECT_VERSION}")
+add_test(NAME citysorter_help COMMAND citysorter --help)
+set_tests_properties(citysorter_help PROPERTIES PASS_REGULAR_EXPRESSION "Usage:.*OPTIONS")
+add_test(NAME citysorter_unknown_command COMMAND citysorter --unknown)
+set_tests_properties(citysorter_unknown_command PROPERTIES WILL_FAIL TRUE)
 
-# Find CUnit for unit testing
-find_library(CUNIT_LIBRARY NAMES cunit libcunit cunitlib REQUIRED)
-find_path(CUNIT_INCLUDE_DIR NAMES CUnit/CUnit.h)
-
-# Unit Tests
-add_executable(test_bst tests/unit/test_bst.c src/core/bst.c)
-target_include_directories(test_bst PRIVATE ${PROJECT_SOURCE_DIR}/include ${CUNIT_INCLUDE_DIR})
-target_link_libraries(test_bst ${CUNIT_LIBRARY})
-
-# Add tests to CTest
-add_test(NAME BSTUnitTests COMMAND test_bst)
-
-# Print build information
-message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
-message(STATUS "C Compiler: ${CMAKE_C_COMPILER}")
-message(STATUS "C Flags: ${CMAKE_C_FLAGS}")
