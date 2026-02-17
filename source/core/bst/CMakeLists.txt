@@ -1,17 +1,17 @@
-add_library(BinarySortTree STATIC)
+add_library(BinarySearchTree STATIC)
 
-target_sources(BinarySortTree PRIVATE source/bst.c)
+target_sources(BinarySearchTree PRIVATE source/bst.c)
 
-# Expose the public include directory of the Binary Sort Tree library
+# Expose the public include directory of the Binary Search Tree library
 # Also used by the library itself, so it is not added as an "INTERFACE" include directory, 
 # but as a "PUBLIC" include directory
-target_include_directories(BinarySortTree PUBLIC include)
+target_include_directories(BinarySearchTree PUBLIC include)
 
 # Build the unit test
 add_executable(test_bst test/test_bst.c)
 
 # Link the test with the library and Check
-target_link_libraries(test_bst BinarySortTree)
+target_link_libraries(test_bst BinarySearchTree)
 find_library(CHECK_LIBRARY NAMES check libcheck REQUIRED)
 find_library(SUBUNIT_LIBRARY NAMES subunit libsubunit)
 find_library(M_LIBRARY NAMES m)

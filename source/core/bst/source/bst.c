@@ -1,28 +1,40 @@
 #include "bst.h"
 #include <stdlib.h>
-#include <string.h>
 #include <stdio.h>
 
 /**
- * Create a new BST node with the given city name
+ * @brief BST Node structure (opaque, internal use only)
+ * 
+ * Represents a single node in the Binary Search Tree.
+ * This structure is not exposed in the public API to prevent accidental corruption.
  */
-BSTNode *bst_create_node(const char *city) {
-    if (!city) {
-        return NULL;
-    }
+typedef struct BSTNode {
+    const void *data;        // Generic data pointer (user-managed memory, const for safety)
+    struct BSTNode *left;    // Left child (data ordered according to comparison function)
+    struct BSTNode *right;   // Right child (data ordered according to comparison function)
+} BSTNode;
 
+/**
+ * @brief BST Tree structure (opaque, internal use only)
+ * 
+ * Encapsulates a Binary Search Tree with a consistent comparison function.
+ * The tree-wide comparison function ensures the tree structure remains valid.
+ */
+struct BSTTree {
+    BSTNode *root;           // Root of the tree
+    bst_compare_fn compare;  // Comparison function to compare data elements for ordering in the tree
+};
+
+/**
+ * Create a new BST node with the given data pointer
+ */
+static BSTNode *_bst_create_node(const void *data) {
     BSTNode *node = (BSTNode *)malloc(sizeof(BSTNode));
     if (!node) {
         return NULL;
     }
 
-    node->city = (char *)malloc(strlen(city) + 1);
-    if (!node->city) {
-        free(node);
-        return NULL;
-    }
-
-    strcpy(node->city, city);
+    node->data = data;
     node->left = NULL;
     node->right = NULL;
 
@@ -30,142 +42,201 @@ BSTNode *bst_create_node(const char *city) {
 }
 
 /**
- * Insert a city into the BST
+ * Create a new BST with a given comparison function
  */
-BSTNode *bst_insert(BSTNode *root, const char *city) {
-    if (!city) {
-        return root;
-    }
-
-    // Base case: empty tree
-    if (root == NULL) {
-        return bst_create_node(city);
-    }
-
-    // Compare city with root's city
-    int cmp = strcmp(city, root->city);
-
-    if (cmp < 0) {
-        // Insert into left subtree
-        root->left = bst_insert(root->left, city);
-    } else if (cmp > 0) {
-        // Insert into right subtree
-        root->right = bst_insert(root->right, city);
-    }
-    // If cmp == 0, the city already exists, so don't insert duplicates
-
-    return root;
-}
-
-/**
- * Search for a city in the BST
- */
-BSTNode *bst_search(BSTNode *root, const char *city) {
-    if (!root || !city) {
+BSTTree *bst_create(bst_compare_fn compare) {
+    if (!compare) {
         return NULL;
     }
 
-    int cmp = strcmp(city, root->city);
+    BSTTree *tree = (BSTTree *)malloc(sizeof(BSTTree));
+    if (!tree) {
+        return NULL;
+    }
+
+    tree->root = NULL;
+    tree->compare = compare;
+
+    return tree;
+}
+
+/**
+ * Insert data into the BST (recursive helper)
+ */
+static BSTNode *_bst_insert_recursive(BSTNode *node, const void *data, bst_compare_fn compare) {
+    if (node == NULL) {
+        // Empty spot found, create a new node
+        return _bst_create_node(data);
+    }
+
+    // Walk the tree according to the comparison function until an empty spot is found
+    int cmp = compare(data, node->data);
+
+    if (cmp < 0) {
+        node->left = _bst_insert_recursive(node->left, data, compare);
+    } else if (cmp > 0) {
+        node->right = _bst_insert_recursive(node->right, data, compare);
+    }
+    // If cmp == 0, the data already exists, so don't insert duplicates
+
+    return node;
+}
+
+/**
+ * Insert data into the BST
+ * return -1 if insertion failed (e.g. data already exists or error), 0 if successful
+ */
+int bst_insert(BSTTree *tree, const void *data) {
+    if (!tree || !data) {
+        return -1;
+    }
+
+    tree->root = _bst_insert_recursive(tree->root, data, tree->compare);
+    return 0;
+}
+
+/**
+ * Search for data in the BST (recursive helper)
+ */
+static BSTNode *_bst_search_recursive(BSTNode *node, const void *data, bst_compare_fn compare) {
+    if (!node || !data) {
+        return NULL;
+    }
+
+    int cmp = compare(data, node->data);
 
     if (cmp == 0) {
-        return root;
+        return node;
     } else if (cmp < 0) {
-        return bst_search(root->left, city);
+        return _bst_search_recursive(node->left, data, compare);
     } else {
-        return bst_search(root->right, city);
+        return _bst_search_recursive(node->right, data, compare);
     }
+}
+
+/**
+ * Search for data in the BST
+ */
+const void *bst_search(BSTTree *tree, const void *data) {
+    if (!tree || !data) {
+        return NULL;
+    }
+
+    BSTNode *node = _bst_search_recursive(tree->root, data, tree->compare);
+    return node ? node->data : NULL;
 }
 
 /**
  * Find the node with the minimum value (leftmost node)
  */
-BSTNode *bst_find_min(BSTNode *root) {
-    if (!root) {
+const void *bst_find_min(BSTTree *tree) {
+    if (!tree || !tree->root) {
         return NULL;
     }
 
-    while (root->left != NULL) {
-        root = root->left;
+    BSTNode *node = tree->root;
+    while (node->left != NULL) {
+        node = node->left;
     }
 
-    return root;
+    return node->data;
 }
 
 /**
- * Remove a city from the BST
+ * Remove data from the BST (recursive helper)
  */
-BSTNode *bst_remove(BSTNode *root, const char *city) {
-    if (!root || !city) {
-        return root;
+static BSTNode *_bst_remove_recursive(BSTNode *node, const void *data, bst_compare_fn compare) {
+    if (!node || !data) {
+        return node;
     }
 
-    int cmp = strcmp(city, root->city);
+    int cmp = compare(data, node->data);
 
     if (cmp < 0) {
-        root->left = bst_remove(root->left, city);
+        node->left = _bst_remove_recursive(node->left, data, compare);
     } else if (cmp > 0) {
-        root->right = bst_remove(root->right, city);
+        node->right = _bst_remove_recursive(node->right, data, compare);
     } else {
         // Node to be deleted found
 
         // Case 1: Node has no children (leaf node)
-        if (root->left == NULL && root->right == NULL) {
-            free(root->city);
-            free(root);
+        if (node->left == NULL && node->right == NULL) {
+            free(node);
             return NULL;
         }
 
         // Case 2: Node has only one child
-        if (root->left == NULL) {
-            BSTNode *temp = root->right;
-            free(root->city);
-            free(root);
+        if (node->left == NULL) {
+            BSTNode *temp = node->right;
+            free(node);
             return temp;
         }
 
-        if (root->right == NULL) {
-            BSTNode *temp = root->left;
-            free(root->city);
-            free(root);
+        if (node->right == NULL) {
+            BSTNode *temp = node->left;
+            free(node);
             return temp;
         }
 
         // Case 3: Node has two children
         // Find the in-order successor (smallest node in right subtree)
-        BSTNode *successor = bst_find_min(root->right);
-
-        // Replace root's city with successor's city
-        free(root->city);
-        root->city = (char *)malloc(strlen(successor->city) + 1);
-        if (root->city) {
-            strcpy(root->city, successor->city);
+        BSTNode *successor = node->right;
+        while (successor->left != NULL) {
+            successor = successor->left;
         }
 
+        // Replace root's data with successor's data
+        node->data = successor->data;
+
         // Delete the successor node
-        root->right = bst_remove(root->right, successor->city);
+        node->right = _bst_remove_recursive(node->right, successor->data, compare);
     }
 
-    return root;
+    return node;
 }
 
 /**
- * Print the BST in in-order traversal (alphabetically sorted)
+ * Remove data from the BST
  */
-void bst_print_inorder(BSTNode *root) {
-    if (root == NULL) {
+int bst_remove(BSTTree *tree, const void *data) {
+    if (!tree || !data) {
+        return 0;
+    }
+
+    BSTNode *old_root = tree->root;
+    tree->root = _bst_remove_recursive(tree->root, data, tree->compare);
+    return old_root != tree->root || (tree->root != NULL && tree->compare(data, tree->root->data) == 0);
+}
+
+/**
+ * Print the BST in in-order traversal using a print function (recursive helper)
+ */
+static void _bst_print_inorder_recursive(BSTNode *root, void (*print)(const void *)) {
+    if (root == NULL || !print) {
         return;
     }
 
-    bst_print_inorder(root->left);
-    printf("%s\n", root->city);
-    bst_print_inorder(root->right);
+    _bst_print_inorder_recursive(root->left, print);
+    print(root->data);
+    _bst_print_inorder_recursive(root->right, print);
 }
 
 /**
- * Print the BST in a rotated format (right → root → left) for visualization
+ * Print the BST in in-order traversal using a print function
  */
-void bst_print_rotated(BSTNode *root, int space) {
-    if (root == NULL) {
+void bst_print_inorder(BSTTree *tree, void (*print)(const void *)) {
+    if (!tree || !print) {
+        return;
+    }
+
+    _bst_print_inorder_recursive(tree->root, print);
+}
+
+/**
+ * Print the BST in a rotated format (right → root → left) for visualization (recursive helper)
+ */
+static void _bst_print_rotated_recursive(BSTNode *root, int space, void (*print)(const void *)) {
+    if (root == NULL || !print) {
         return;
     }
 
@@ -173,57 +244,99 @@ void bst_print_rotated(BSTNode *root, int space) {
     space += 5;
 
     // Process right subtree
-    bst_print_rotated(root->right, space);
+    _bst_print_rotated_recursive(root->right, space, print);
 
     // Print current node
     printf("\n");
     for (int i = 5; i < space; i++) {
         printf(" ");
     }
-    printf("%s\n", root->city);
+    print(root->data);
 
     // Process left subtree
-    bst_print_rotated(root->left, space);
+    _bst_print_rotated_recursive(root->left, space, print);
 }
 
 /**
- * Delete the entire BST and free all memory
+ * Print the BST in a rotated format (right → root → left) for visualization
  */
-void bst_delete_tree(BSTNode *root) {
+void bst_print_rotated(BSTTree *tree, int space, void (*print)(const void *)) {
+    if (!tree || !print) {
+        return;
+    }
+
+    _bst_print_rotated_recursive(tree->root, space, print);
+}
+
+/**
+ * Delete the entire BST and free all memory for nodes (recursive helper)
+ */
+static void _bst_delete_tree_recursive(BSTNode *root, void (*free_data)(void *)) {
     if (root == NULL) {
         return;
     }
 
     // Recursively delete left and right subtrees
-    bst_delete_tree(root->left);
-    bst_delete_tree(root->right);
+    _bst_delete_tree_recursive(root->left, free_data);
+    _bst_delete_tree_recursive(root->right, free_data);
 
     // Free the node itself
-    free(root->city);
     free(root);
 }
 
 /**
- * Get the height of the BST
+ * Delete the entire BST and free all memory for nodes
  */
-int bst_height(BSTNode *root) {
+void bst_delete(BSTTree *tree, void (*free_data)(void *)) {
+    if (!tree) {
+        return;
+    }
+
+    _bst_delete_tree_recursive(tree->root, free_data);
+    free(tree);
+}
+
+/**
+ * Get the height of the BST (recursive helper)
+ */
+static int _bst_height_recursive(BSTNode *root) {
     if (root == NULL) {
         return -1;
     }
 
-    int left_height = bst_height(root->left);
-    int right_height = bst_height(root->right);
+    int left_height = _bst_height_recursive(root->left);
+    int right_height = _bst_height_recursive(root->right);
 
     return 1 + (left_height > right_height ? left_height : right_height);
 }
 
 /**
- * Get the number of nodes in the BST
+ * Get the height of the BST
  */
-size_t bst_count_nodes(BSTNode *root) {
+int bst_height(BSTTree *tree) {
+    if (!tree) {
+        return -1;
+    }
+    return _bst_height_recursive(tree->root);
+}
+
+/**
+ * Get the number of nodes in the BST (recursive helper)
+ */
+static size_t _bst_count_nodes_recursive(BSTNode *root) {
     if (root == NULL) {
         return 0;
     }
 
-    return 1 + bst_count_nodes(root->left) + bst_count_nodes(root->right);
+    return 1 + _bst_count_nodes_recursive(root->left) + _bst_count_nodes_recursive(root->right);
+}
+
+/**
+ * Get the number of nodes in the BST
+ */
+size_t bst_count_nodes(BSTTree *tree) {
+    if (!tree) {
+        return 0;
+    }
+    return _bst_count_nodes_recursive(tree->root);
 }

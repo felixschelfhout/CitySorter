@@ -16,9 +16,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 configure_file(source/cli/version.h.in include/version.h)
 list(APPEND EXTRA_INCLUDES ${PROJECT_BINARY_DIR}/include)
 
-# Configure the Binary Sort Tree library
+# Configure the Binary Search Tree library
 add_subdirectory(source/core/bst)
-list(APPEND EXTRA_LIBS BinarySortTree)
+list(APPEND EXTRA_LIBS BinarySearchTree)
 
 # Create Application
 add_executable(citysorter)
