@@ -49,12 +49,5 @@ target_include_directories(citysorter PRIVATE ${PROJECT_SOURCE_DIR}/include)
 target_include_directories(citysorter PRIVATE ${EXTRA_INCLUDES})
 
 # Test the Application
-enable_testing()
-add_test(NAME citysorter_runs COMMAND citysorter)
-add_test(NAME citysorter_version COMMAND citysorter --version)
-set_tests_properties(citysorter_version PROPERTIES PASS_REGULAR_EXPRESSION "citysorter ${PROJECT_VERSION}")
-add_test(NAME citysorter_help COMMAND citysorter --help)
-set_tests_properties(citysorter_help PROPERTIES PASS_REGULAR_EXPRESSION "Usage:.*OPTIONS")
-add_test(NAME citysorter_unknown_command COMMAND citysorter --unknown)
-set_tests_properties(citysorter_unknown_command PROPERTIES WILL_FAIL TRUE)
+include(cmake/CliTest.cmake)
 

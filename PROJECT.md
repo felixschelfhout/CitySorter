@@ -121,6 +121,7 @@ Write a C program that performs the following:
 
 4. Implements user commands using a simple state machine, supporting the following inputs:
     - `print` Display the BST in a rotated format (right -> root -> left).
+    - `travel-to [country]` Replace the current BST with the cities of the specified country by fetching new data from the API.
     - `add [city]` Add a new city to the BST.
     - `remove [city]` Remove a city from the BST.
     - `stop` Exit the program
