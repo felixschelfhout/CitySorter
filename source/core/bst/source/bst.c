@@ -1,34 +1,34 @@
 #include "bst.h"
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 /**
  * @brief BST Node structure (opaque, internal use only)
- * 
+ *
  * Represents a single node in the Binary Search Tree.
  * This structure is not exposed in the public API to prevent accidental corruption.
  */
 typedef struct BSTNode {
-    const void *data;        // Generic data pointer (user-managed memory, const for safety)
-    struct BSTNode *left;    // Left child (data ordered according to comparison function)
-    struct BSTNode *right;   // Right child (data ordered according to comparison function)
+    const void *data;      // Generic data pointer (user-managed memory, const for safety)
+    struct BSTNode *left;  // Left child (data ordered according to comparison function)
+    struct BSTNode *right; // Right child (data ordered according to comparison function)
 } BSTNode;
 
 /**
  * @brief BST Tree structure (opaque, internal use only)
- * 
+ *
  * Encapsulates a Binary Search Tree with a consistent comparison function.
  * The tree-wide comparison function ensures the tree structure remains valid.
  */
 struct BSTTree {
-    BSTNode *root;           // Root of the tree
-    bst_compare_fn compare;  // Comparison function to compare data elements for ordering in the tree
+    BSTNode *root;          // Root of the tree
+    bst_compare_fn compare; // Comparison function to compare data elements for ordering in the tree
 };
 
 /**
  * Create a new BST node with the given data pointer
  */
-static BSTNode *_bst_create_node(const void *data) {
+static BSTNode *bst_create_node(const void *data) {
     BSTNode *node = (BSTNode *)malloc(sizeof(BSTNode));
     if (!node) {
         return NULL;
@@ -63,19 +63,19 @@ BSTTree *bst_create(bst_compare_fn compare) {
 /**
  * Insert data into the BST (recursive helper)
  */
-static BSTNode *_bst_insert_recursive(BSTNode *node, const void *data, bst_compare_fn compare) {
+static BSTNode *bst_insert_recursive(BSTNode *node, const void *data, bst_compare_fn compare) {
     if (node == NULL) {
         // Empty spot found, create a new node
-        return _bst_create_node(data);
+        return bst_create_node(data);
     }
 
     // Walk the tree according to the comparison function until an empty spot is found
     int cmp = compare(data, node->data);
 
     if (cmp < 0) {
-        node->left = _bst_insert_recursive(node->left, data, compare);
+        node->left = bst_insert_recursive(node->left, data, compare);
     } else if (cmp > 0) {
-        node->right = _bst_insert_recursive(node->right, data, compare);
+        node->right = bst_insert_recursive(node->right, data, compare);
     }
     // If cmp == 0, the data already exists, so don't insert duplicates
 
@@ -91,14 +91,14 @@ int bst_insert(BSTTree *tree, const void *data) {
         return -1;
     }
 
-    tree->root = _bst_insert_recursive(tree->root, data, tree->compare);
+    tree->root = bst_insert_recursive(tree->root, data, tree->compare);
     return 0;
 }
 
 /**
  * Search for data in the BST (recursive helper)
  */
-static BSTNode *_bst_search_recursive(BSTNode *node, const void *data, bst_compare_fn compare) {
+static BSTNode *bst_search_recursive(BSTNode *node, const void *data, bst_compare_fn compare) {
     if (!node || !data) {
         return NULL;
     }
@@ -107,11 +107,11 @@ static BSTNode *_bst_search_recursive(BSTNode *node, const void *data, bst_compa
 
     if (cmp == 0) {
         return node;
-    } else if (cmp < 0) {
-        return _bst_search_recursive(node->left, data, compare);
-    } else {
-        return _bst_search_recursive(node->right, data, compare);
     }
+    if (cmp < 0) {
+        return bst_search_recursive(node->left, data, compare);
+    }
+    return bst_search_recursive(node->right, data, compare);
 }
 
 /**
@@ -122,7 +122,7 @@ const void *bst_search(BSTTree *tree, const void *data) {
         return NULL;
     }
 
-    BSTNode *node = _bst_search_recursive(tree->root, data, tree->compare);
+    BSTNode *node = bst_search_recursive(tree->root, data, tree->compare);
     return node ? node->data : NULL;
 }
 
@@ -145,7 +145,7 @@ const void *bst_find_min(BSTTree *tree) {
 /**
  * Remove data from the BST (recursive helper)
  */
-static BSTNode *_bst_remove_recursive(BSTNode *node, const void *data, bst_compare_fn compare) {
+static BSTNode *bst_remove_recursive(BSTNode *node, const void *data, bst_compare_fn compare) {
     if (!node || !data) {
         return node;
     }
@@ -153,9 +153,9 @@ static BSTNode *_bst_remove_recursive(BSTNode *node, const void *data, bst_compa
     int cmp = compare(data, node->data);
 
     if (cmp < 0) {
-        node->left = _bst_remove_recursive(node->left, data, compare);
+        node->left = bst_remove_recursive(node->left, data, compare);
     } else if (cmp > 0) {
-        node->right = _bst_remove_recursive(node->right, data, compare);
+        node->right = bst_remove_recursive(node->right, data, compare);
     } else {
         // Node to be deleted found
 
@@ -189,7 +189,7 @@ static BSTNode *_bst_remove_recursive(BSTNode *node, const void *data, bst_compa
         node->data = successor->data;
 
         // Delete the successor node
-        node->right = _bst_remove_recursive(node->right, successor->data, compare);
+        node->right = bst_remove_recursive(node->right, successor->data, compare);
     }
 
     return node;
@@ -203,22 +203,23 @@ int bst_remove(BSTTree *tree, const void *data) {
         return 0;
     }
 
-    BSTNode *old_root = tree->root;
-    tree->root = _bst_remove_recursive(tree->root, data, tree->compare);
-    return old_root != tree->root || (tree->root != NULL && tree->compare(data, tree->root->data) == 0);
+    const BSTNode *old_root = tree->root;
+    tree->root = bst_remove_recursive(tree->root, data, tree->compare);
+    return old_root != tree->root ||
+           (tree->root != NULL && tree->compare(data, tree->root->data) == 0);
 }
 
 /**
  * Print the BST in in-order traversal using a print function (recursive helper)
  */
-static void _bst_print_inorder_recursive(BSTNode *root, void (*print)(const void *)) {
+static void bst_print_inorder_recursive(BSTNode *root, void (*print)(const void *)) {
     if (root == NULL || !print) {
         return;
     }
 
-    _bst_print_inorder_recursive(root->left, print);
+    bst_print_inorder_recursive(root->left, print);
     print(root->data);
-    _bst_print_inorder_recursive(root->right, print);
+    bst_print_inorder_recursive(root->right, print);
 }
 
 /**
@@ -229,13 +230,13 @@ void bst_print_inorder(BSTTree *tree, void (*print)(const void *)) {
         return;
     }
 
-    _bst_print_inorder_recursive(tree->root, print);
+    bst_print_inorder_recursive(tree->root, print);
 }
 
 /**
  * Print the BST in a rotated format (right → root → left) for visualization (recursive helper)
  */
-static void _bst_print_rotated_recursive(BSTNode *root, int space, void (*print)(const void *)) {
+static void bst_print_rotated_recursive(BSTNode *root, int space, void (*print)(const void *)) {
     if (root == NULL || !print) {
         return;
     }
@@ -244,7 +245,7 @@ static void _bst_print_rotated_recursive(BSTNode *root, int space, void (*print)
     space += 5;
 
     // Process right subtree
-    _bst_print_rotated_recursive(root->right, space, print);
+    bst_print_rotated_recursive(root->right, space, print);
 
     // Print current node
     printf("\n");
@@ -254,7 +255,7 @@ static void _bst_print_rotated_recursive(BSTNode *root, int space, void (*print)
     print(root->data);
 
     // Process left subtree
-    _bst_print_rotated_recursive(root->left, space, print);
+    bst_print_rotated_recursive(root->left, space, print);
 }
 
 /**
@@ -265,20 +266,20 @@ void bst_print_rotated(BSTTree *tree, int space, void (*print)(const void *)) {
         return;
     }
 
-    _bst_print_rotated_recursive(tree->root, space, print);
+    bst_print_rotated_recursive(tree->root, space, print);
 }
 
 /**
  * Delete the entire BST and free all memory for nodes (recursive helper)
  */
-static void _bst_delete_tree_recursive(BSTNode *root, void (*free_data)(void *)) {
+static void bst_delete_tree_recursive(BSTNode *root, void (*free_data)(void *)) {
     if (root == NULL) {
         return;
     }
 
     // Recursively delete left and right subtrees
-    _bst_delete_tree_recursive(root->left, free_data);
-    _bst_delete_tree_recursive(root->right, free_data);
+    bst_delete_tree_recursive(root->left, free_data);
+    bst_delete_tree_recursive(root->right, free_data);
 
     // Free the node itself
     free(root);
@@ -292,20 +293,20 @@ void bst_delete(BSTTree *tree, void (*free_data)(void *)) {
         return;
     }
 
-    _bst_delete_tree_recursive(tree->root, free_data);
+    bst_delete_tree_recursive(tree->root, free_data);
     free(tree);
 }
 
 /**
  * Get the height of the BST (recursive helper)
  */
-static int _bst_height_recursive(BSTNode *root) {
+static int bst_height_recursive(BSTNode *root) {
     if (root == NULL) {
         return -1;
     }
 
-    int left_height = _bst_height_recursive(root->left);
-    int right_height = _bst_height_recursive(root->right);
+    int left_height = bst_height_recursive(root->left);
+    int right_height = bst_height_recursive(root->right);
 
     return 1 + (left_height > right_height ? left_height : right_height);
 }
@@ -317,18 +318,18 @@ int bst_height(BSTTree *tree) {
     if (!tree) {
         return -1;
     }
-    return _bst_height_recursive(tree->root);
+    return bst_height_recursive(tree->root);
 }
 
 /**
  * Get the number of nodes in the BST (recursive helper)
  */
-static size_t _bst_count_nodes_recursive(BSTNode *root) {
+static size_t bst_count_nodes_recursive(BSTNode *root) {
     if (root == NULL) {
         return 0;
     }
 
-    return 1 + _bst_count_nodes_recursive(root->left) + _bst_count_nodes_recursive(root->right);
+    return 1 + bst_count_nodes_recursive(root->left) + bst_count_nodes_recursive(root->right);
 }
 
 /**
@@ -338,5 +339,5 @@ size_t bst_count_nodes(BSTTree *tree) {
     if (!tree) {
         return 0;
     }
-    return _bst_count_nodes_recursive(tree->root);
+    return bst_count_nodes_recursive(tree->root);
 }

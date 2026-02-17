@@ -1,6 +1,7 @@
 add_library(BinarySearchTree STATIC)
 
 target_sources(BinarySearchTree PRIVATE source/bst.c)
+enable_sanitizers(BinarySearchTree)
 
 # Expose the public include directory of the Binary Search Tree library
 # Also used by the library itself, so it is not added as an "INTERFACE" include directory, 
@@ -29,6 +30,7 @@ if(RT_LIBRARY)
 endif()
 target_link_libraries(test_bst pthread)
 target_include_directories(test_bst PRIVATE ${CHECK_INCLUDE_DIR})
+enable_sanitizers(test_bst)
 
 # Add test to CTest with Check integration
 enable_testing()

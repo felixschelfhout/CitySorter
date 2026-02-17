@@ -1,9 +1,9 @@
-#ifndef __VERIONS_H__
-#define __VERIONS_H__
+#ifndef VERSION_H__
+#define VERSION_H__
 
 // Versions for main application
 #define CITYSORTER_VERSION_MAJOR @citysorter_VERSION_MAJOR@
 #define CITYSORTER_VERSION_MINOR @citysorter_VERSION_MINOR@
 #define CITYSORTER_VERSION_PATCH @citysorter_VERSION_PATCH@
 
-#endif // __VERIONS_H__
+#endif // VERSION_H__

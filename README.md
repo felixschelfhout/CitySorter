@@ -18,8 +18,13 @@ An interactive command-line that looks up all cities of your favourite countries
 ## Installation
 
 ```bash
-sudo apt-get update
-sudo apt-get install build-essential cmake libcurl4-openssl-dev libcjson-dev check pkg-config libsubunit-dev
+sudo apt update
+# development
+sudo apt install build-essential cmake libcurl4-openssl-dev libcjson-dev 
+# testing 
+sudo apt install check pkg-config libsubunit-dev 
+# tooling 
+sudo apt install codespell clang clang-tidy clang-format libclang-rt-dev lcov cppcheck 
 ```
 
 ## Building

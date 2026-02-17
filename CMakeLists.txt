@@ -12,6 +12,8 @@ project(
 set(CMAKE_CXX_STANDARD 98)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+include(cmake/Tooling.cmake)
+
 # Generate ${PROJECT_BINARY_DIR}/include/version.h from version.h.in
 configure_file(source/cli/version.h.in include/version.h)
 list(APPEND EXTRA_INCLUDES ${PROJECT_BINARY_DIR}/include)
@@ -39,6 +41,7 @@ target_link_libraries(citysorter ${EXTRA_LIBS})
 # Set Application compiler flags
 target_compile_features(citysorter PRIVATE c_std_99)
 target_compile_options(citysorter PRIVATE -Wall -Wextra -Wpedantic)
+enable_sanitizers(citysorter)
 
 # Set Application include directories
 target_include_directories(citysorter PRIVATE ${PROJECT_SOURCE_DIR}/include)
