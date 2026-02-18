@@ -1,6 +1,7 @@
 add_library(BinarySearchTree STATIC)
 
 target_sources(BinarySearchTree PRIVATE source/bst.c)
+target_compile_options(BinarySearchTree PRIVATE -std=c99)
 enable_sanitizers(BinarySearchTree)
 
 # Expose the public include directory of the Binary Search Tree library
@@ -12,7 +13,7 @@ target_include_directories(BinarySearchTree PUBLIC include)
 add_executable(test_bst test/test_bst.c)
 
 # Add debug symbols and disable optimizations for easier debugging
-target_compile_options(test_bst PRIVATE -g -O0)
+target_compile_options(test_bst PRIVATE -g -O0 -std=c99)
 
 # Link the test with the library and Check
 target_link_libraries(test_bst BinarySearchTree)

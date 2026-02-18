@@ -4,7 +4,11 @@ Checks: >
   performance-*,
   portability-*,
   readability-*,
+  -altera-*,
+  -llvmlibc-*,
   -bugprone-easily-swappable-parameters,
+  -cppcoreguidelines-macro-to-enum,
+  -modernize-macro-to-enum,
   -readability-magic-numbers,
   -readability-identifier-length
 WarningsAsErrors: ''

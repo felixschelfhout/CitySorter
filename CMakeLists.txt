@@ -40,7 +40,7 @@ target_link_libraries(citysorter ${EXTRA_LIBS})
 
 # Set Application compiler flags
 target_compile_features(citysorter PRIVATE c_std_99)
-target_compile_options(citysorter PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_options(citysorter PRIVATE -std=c99 -Wall -Wextra -Wpedantic)
 enable_sanitizers(citysorter)
 
 # Set Application include directories

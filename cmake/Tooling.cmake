@@ -12,12 +12,10 @@ if(ENABLE_CLANG_TIDY)
         set(CMAKE_C_CLANG_TIDY ${CLANG_TIDY_EXE})
         
         # Add target to auto-fix clang-tidy warnings
+        # Only include .c source files (not headers) as clang-tidy needs compilation database entries
         file(GLOB_RECURSE TIDY_SOURCES CONFIGURE_DEPENDS
             ${PROJECT_SOURCE_DIR}/source/*.c
-            ${PROJECT_SOURCE_DIR}/source/*.h
-            ${PROJECT_SOURCE_DIR}/include/*.h
             ${PROJECT_SOURCE_DIR}/tests/*.c
-            ${PROJECT_SOURCE_DIR}/tests/*.h
         )
         add_custom_target(tidy-fix
             COMMAND ${CLANG_TIDY_EXE} 
