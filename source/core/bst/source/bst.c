@@ -23,6 +23,7 @@ typedef struct BSTNode {
 struct BSTTree {
     BSTNode *root;          // Root of the tree
     bst_compare_fn compare; // Comparison function to compare data elements for ordering in the tree
+    print_fn print;         // Print function for data visualization
 };
 
 /**
@@ -44,8 +45,11 @@ static BSTNode *bst_create_node(const void *data) {
 /**
  * Create a new BST with a given comparison function
  */
-BSTTree *bst_create(bst_compare_fn compare) {
+BSTTree *bst_create(bst_compare_fn compare, print_fn print) {
     if (!compare) {
+        return NULL;
+    }
+    if (!print) {
         return NULL;
     }
 
@@ -56,6 +60,7 @@ BSTTree *bst_create(bst_compare_fn compare) {
 
     tree->root = NULL;
     tree->compare = compare;
+    tree->print = print;
 
     return tree;
 }
@@ -129,7 +134,7 @@ const void *bst_search(BSTTree *tree, const void *data) {
 /**
  * Find the node with the minimum value (leftmost node)
  */
-const void *bst_find_min(BSTTree *tree) {
+const void *bst_get_min(BSTTree *tree) {
     if (!tree || !tree->root) {
         return NULL;
     }
@@ -137,6 +142,22 @@ const void *bst_find_min(BSTTree *tree) {
     BSTNode *node = tree->root;
     while (node->left != NULL) {
         node = node->left;
+    }
+
+    return node->data;
+}
+
+/**
+ * Find the node with the maximum value (rightmost node)
+ */
+const void *bst_get_max(BSTTree *tree) {
+    if (!tree || !tree->root) {
+        return NULL;
+    }
+
+    BSTNode *node = tree->root;
+    while (node->right != NULL) {
+        node = node->right;
     }
 
     return node->data;
@@ -225,12 +246,12 @@ static void bst_print_inorder_recursive(BSTNode *root, void (*print)(const void 
 /**
  * Print the BST in in-order traversal using a print function
  */
-void bst_print_inorder(BSTTree *tree, void (*print)(const void *)) {
-    if (!tree || !print) {
+void bst_print_inorder(BSTTree *tree) {
+    if (!tree || !tree->print) {
         return;
     }
 
-    bst_print_inorder_recursive(tree->root, print);
+    bst_print_inorder_recursive(tree->root, tree->print);
 }
 
 /**
@@ -247,11 +268,7 @@ static void bst_print_rotated_recursive(BSTNode *root, int space, void (*print)(
     // Process right subtree
     bst_print_rotated_recursive(root->right, space, print);
 
-    // Print current node
-    printf("\n");
-    for (int i = 5; i < space; i++) {
-        printf(" ");
-    }
+    // Print current node (formatting is the responsibility of the print function)
     print(root->data);
 
     // Process left subtree
@@ -261,39 +278,39 @@ static void bst_print_rotated_recursive(BSTNode *root, int space, void (*print)(
 /**
  * Print the BST in a rotated format (right → root → left) for visualization
  */
-void bst_print_rotated(BSTTree *tree, int space, void (*print)(const void *)) {
-    if (!tree || !print) {
+void bst_print_rotated(BSTTree *tree, int space) {
+    if (!tree || !tree->print) {
         return;
     }
 
-    bst_print_rotated_recursive(tree->root, space, print);
+    bst_print_rotated_recursive(tree->root, space, tree->print);
 }
 
 /**
  * Delete the entire BST and free all memory for nodes (recursive helper)
  */
-static void bst_delete_tree_recursive(BSTNode *root, void (*free_data)(void *)) {
-    if (root == NULL) {
+static void bst_delete_tree_recursive(BSTNode *node) {
+    if (node == NULL) {
         return;
     }
 
     // Recursively delete left and right subtrees
-    bst_delete_tree_recursive(root->left, free_data);
-    bst_delete_tree_recursive(root->right, free_data);
+    bst_delete_tree_recursive(node->left);
+    bst_delete_tree_recursive(node->right);
 
     // Free the node itself
-    free(root);
+    free(node);
 }
 
 /**
  * Delete the entire BST and free all memory for nodes
  */
-void bst_delete(BSTTree *tree, void (*free_data)(void *)) {
+void bst_delete(BSTTree *tree) {
     if (!tree) {
         return;
     }
 
-    bst_delete_tree_recursive(tree->root, free_data);
+    bst_delete_tree_recursive(tree->root);
     free(tree);
 }
 

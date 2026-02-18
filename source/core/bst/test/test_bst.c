@@ -21,25 +21,116 @@ static void print_string(const void *data) {
     printf("%s\n", (const char *)data);
 }
 
+/**
+ * Integer comparison function for BST
+ * returns negative value if a is less than b
+ * returns positive value if a is greater than b
+ * returns 0, if a and b are equal
+ */
+static int compare_ints(const void *a, const void *b) {
+    const int val_a = *(const int *)a;
+    const int val_b = *(const int *)b;
+
+    if (val_a < val_b) {
+        return -1;
+    }
+    if (val_a > val_b) {
+        return 1;
+    }
+    return 0;
+}
+
+/**
+ * Integer print function for BST
+ */
+static void print_int(const void *data) {
+    printf("%d\n", *(const int *)data);
+}
+
+typedef struct OutputBuffer {
+    char *data;
+    size_t size;
+    size_t capacity;
+} OutputBuffer;
+
+static OutputBuffer *g_output_buffer = NULL;
+
+static int output_buffer_init(OutputBuffer *buffer, size_t capacity) {
+    buffer->data = (char *)malloc(capacity);
+    if (!buffer->data) {
+        return 0;
+    }
+    buffer->size = 0;
+    buffer->capacity = capacity;
+    buffer->data[0] = '\0';
+    return 1;
+}
+
+static void output_buffer_free(OutputBuffer *buffer) {
+    free(buffer->data);
+    buffer->data = NULL;
+    buffer->size = 0;
+    buffer->capacity = 0;
+}
+
+static int output_buffer_append(OutputBuffer *buffer, const char *text) {
+    size_t len = strlen(text);
+    if (buffer->size + len + 1 > buffer->capacity) {
+        size_t new_capacity = buffer->capacity * 2;
+        if (new_capacity < buffer->size + len + 1) {
+            new_capacity = buffer->size + len + 1;
+        }
+        char *new_data = (char *)realloc(buffer->data, new_capacity);
+        if (!new_data) {
+            return 0;
+        }
+        buffer->data = new_data;
+        buffer->capacity = new_capacity;
+    }
+
+    memcpy(buffer->data + buffer->size, text, len);
+    buffer->size += len;
+    buffer->data[buffer->size] = '\0';
+    return 1;
+}
+
+static void print_string_to_buffer(const void *data) {
+    if (!g_output_buffer) {
+        return;
+    }
+    output_buffer_append(g_output_buffer, (const char *)data);
+    output_buffer_append(g_output_buffer, "\n");
+}
+
+static void print_int_to_buffer(const void *data) {
+    if (!g_output_buffer) {
+        return;
+    }
+    char buffer_str[32];
+    snprintf(buffer_str, sizeof(buffer_str), "%d", *(const int *)data);
+    output_buffer_append(g_output_buffer, buffer_str);
+    output_buffer_append(g_output_buffer, "\n");
+}
+
 // Test: Create a tree
 START_TEST(test_create_tree) {
-    BSTTree *tree = bst_create(compare_strings);
+    BSTTree *tree = bst_create(compare_strings, print_string);
     ck_assert_ptr_nonnull(tree);
     ck_assert_uint_eq(bst_count_nodes(tree), 0);
-    bst_delete(tree, NULL);
+    bst_delete(tree);
 }
 END_TEST
 
 // Test: Create tree with NULL compare
 START_TEST(test_create_tree_null) {
-    BSTTree *tree = bst_create(NULL);
+    BSTTree *tree = bst_create(NULL, NULL);
     ck_assert_ptr_null(tree);
 }
 END_TEST
 
 // Test: Insert single city
 START_TEST(test_insert_single) {
-    BSTTree *tree = bst_create(compare_strings);
+    BSTTree *tree = bst_create(compare_strings, print_string);
     int result = bst_insert(tree, (void *)"Paris");
     ck_assert_int_eq(result, 0);
     ck_assert_uint_eq(bst_count_nodes(tree), 1);
@@ -47,13 +138,13 @@ START_TEST(test_insert_single) {
     const void *found = bst_search(tree, (void *)"Paris");
     ck_assert_ptr_nonnull(found);
     ck_assert_str_eq((const char *)found, "Paris");
-    bst_delete(tree, NULL);
+    bst_delete(tree);
 }
 END_TEST
 
 // Test: Insert multiple cities
 START_TEST(test_insert_multiple) {
-    BSTTree *tree = bst_create(compare_strings);
+    BSTTree *tree = bst_create(compare_strings, print_string);
     bst_insert(tree, (void *)"London");
     bst_insert(tree, (void *)"Berlin");
     bst_insert(tree, (void *)"Tokyo");
@@ -64,26 +155,26 @@ START_TEST(test_insert_multiple) {
     ck_assert_ptr_nonnull(bst_search(tree, (void *)"Berlin"));
     ck_assert_ptr_nonnull(bst_search(tree, (void *)"Tokyo"));
 
-    bst_delete(tree, NULL);
+    bst_delete(tree);
 }
 END_TEST
 
 // Test: Insert duplicate cities (should not insert)
 START_TEST(test_insert_duplicate) {
-    BSTTree *tree = bst_create(compare_strings);
+    BSTTree *tree = bst_create(compare_strings, print_string);
     bst_insert(tree, (void *)"Madrid");
     bst_insert(tree, (void *)"Madrid");
 
     size_t count = bst_count_nodes(tree);
     ck_assert_uint_eq(count, 1);
 
-    bst_delete(tree, NULL);
+    bst_delete(tree);
 }
 END_TEST
 
 // Test: Insert NULL data
 START_TEST(test_insert_null) {
-    BSTTree *tree = bst_create(compare_strings);
+    BSTTree *tree = bst_create(compare_strings, print_string);
     bst_insert(tree, (void *)"Rome");
     int result = bst_insert(tree, NULL);
 
@@ -91,13 +182,13 @@ START_TEST(test_insert_null) {
     ck_assert_uint_eq(count, 1);
     ck_assert_int_eq(result, -1);
 
-    bst_delete(tree, NULL);
+    bst_delete(tree);
 }
 END_TEST
 
 // Test: Search for existing city
 START_TEST(test_search_found) {
-    BSTTree *tree = bst_create(compare_strings);
+    BSTTree *tree = bst_create(compare_strings, print_string);
     bst_insert(tree, (void *)"Amsterdam");
     bst_insert(tree, (void *)"Brussels");
     bst_insert(tree, (void *)"Copenhagen");
@@ -106,72 +197,204 @@ START_TEST(test_search_found) {
     ck_assert_ptr_nonnull(found);
     ck_assert_str_eq((const char *)found, "Brussels");
 
-    bst_delete(tree, NULL);
+    bst_delete(tree);
 }
 END_TEST
 
 // Test: Search for non-existing city
 START_TEST(test_search_not_found) {
-    BSTTree *tree = bst_create(compare_strings);
+    BSTTree *tree = bst_create(compare_strings, print_string);
     bst_insert(tree, (void *)"Vienna");
     bst_insert(tree, (void *)"Prague");
 
     const void *found = bst_search(tree, (void *)"Budapest");
     ck_assert_ptr_null(found);
 
-    bst_delete(tree, NULL);
+    bst_delete(tree);
 }
 END_TEST
 
 // Test: Search in empty tree
 START_TEST(test_search_empty) {
-    BSTTree *tree = bst_create(compare_strings);
+    BSTTree *tree = bst_create(compare_strings, print_string);
     const void *found = bst_search(tree, (void *)"Athens");
     ck_assert_ptr_null(found);
-    bst_delete(tree, NULL);
+    bst_delete(tree);
 }
 END_TEST
 
 // Test: Search with NULL data
 START_TEST(test_search_null) {
-    BSTTree *tree = bst_create(compare_strings);
+    BSTTree *tree = bst_create(compare_strings, print_string);
     bst_insert(tree, (void *)"Oslo");
 
     const void *found = bst_search(tree, NULL);
     ck_assert_ptr_null(found);
 
-    bst_delete(tree, NULL);
+    bst_delete(tree);
 }
 END_TEST
 
 // Test: Find minimum in tree
 START_TEST(test_find_min) {
-    BSTTree *tree = bst_create(compare_strings);
+    BSTTree *tree = bst_create(compare_strings, print_string);
     bst_insert(tree, (void *)"Munich");
     bst_insert(tree, (void *)"Hamburg");
     bst_insert(tree, (void *)"Stuttgart");
     bst_insert(tree, (void *)"Frankfurt");
 
-    const void *min = bst_find_min(tree);
+    const void *min = bst_get_min(tree);
     ck_assert_ptr_nonnull(min);
     ck_assert_str_eq((const char *)min, "Frankfurt");
 
-    bst_delete(tree, NULL);
+    bst_delete(tree);
 }
 END_TEST
 
 // Test: Find minimum in empty tree
 START_TEST(test_find_min_empty) {
-    BSTTree *tree = bst_create(compare_strings);
-    const void *min = bst_find_min(tree);
+    BSTTree *tree = bst_create(compare_strings, print_string);
+    const void *min = bst_get_min(tree);
     ck_assert_ptr_null(min);
-    bst_delete(tree, NULL);
+    bst_delete(tree);
 }
 END_TEST
 
+// Test: Find maximum in tree
+START_TEST(test_find_max) {
+    BSTTree *tree = bst_create(compare_strings, print_string);
+    bst_insert(tree, (void *)"Munich");
+    bst_insert(tree, (void *)"Hamburg");
+    bst_insert(tree, (void *)"Stuttgart");
+    bst_insert(tree, (void *)"Frankfurt");
+
+    const void *max = bst_get_max(tree);
+    ck_assert_ptr_nonnull(max);
+    ck_assert_str_eq((const char *)max, "Stuttgart");
+
+    bst_delete(tree);
+}
+END_TEST
+
+// Test: Find maximum in empty tree
+START_TEST(test_find_max_empty) {
+    BSTTree *tree = bst_create(compare_strings, print_string);
+    const void *max = bst_get_max(tree);
+    ck_assert_ptr_null(max);
+    bst_delete(tree);
+}
+END_TEST
+
+// Test: Print inorder output
+START_TEST(test_print_inorder_output) {
+    BSTTree *tree = bst_create(compare_strings, print_string_to_buffer);
+    bst_insert(tree, (void *)"B");
+    bst_insert(tree, (void *)"A");
+    bst_insert(tree, (void *)"C");
+
+    OutputBuffer buffer;
+    ck_assert_int_eq(output_buffer_init(&buffer, 32), 1);
+    g_output_buffer = &buffer;
+    bst_print_inorder(tree);
+    g_output_buffer = NULL;
+
+    ck_assert_str_eq(buffer.data, "A\nB\nC\n");
+
+    output_buffer_free(&buffer);
+    bst_delete(tree);
+}
+END_TEST
+
+// Test: Print rotated output
+START_TEST(test_print_rotated_output) {
+    BSTTree *tree = bst_create(compare_strings, print_string_to_buffer);
+    bst_insert(tree, (void *)"B");
+    bst_insert(tree, (void *)"A");
+    bst_insert(tree, (void *)"C");
+
+    OutputBuffer buffer;
+    ck_assert_int_eq(output_buffer_init(&buffer, 32), 1);
+    g_output_buffer = &buffer;
+    bst_print_rotated(tree, 0);
+    g_output_buffer = NULL;
+
+    char *pos_c = strstr(buffer.data, "C\n");
+    char *pos_b = strstr(buffer.data, "B\n");
+    char *pos_a = strstr(buffer.data, "A\n");
+    ck_assert_ptr_nonnull(pos_c);
+    ck_assert_ptr_nonnull(pos_b);
+    ck_assert_ptr_nonnull(pos_a);
+    ck_assert(pos_c < pos_b);
+    ck_assert(pos_b < pos_a);
+
+    output_buffer_free(&buffer);
+    bst_delete(tree);
+}
+END_TEST
+
+// Test: Print rotated balanced int tree
+static void check_positions_nonnull(const char *pos_80, const char *pos_70, const char *pos_60,
+                                    const char *pos_50, const char *pos_40, const char *pos_30,
+                                    const char *pos_20) {
+    ck_assert_ptr_nonnull(pos_80);
+    ck_assert_ptr_nonnull(pos_70);
+    ck_assert_ptr_nonnull(pos_60);
+    ck_assert_ptr_nonnull(pos_50);
+    ck_assert_ptr_nonnull(pos_40);
+    ck_assert_ptr_nonnull(pos_30);
+    ck_assert_ptr_nonnull(pos_20);
+}
+
+static void check_positions_ordering(const char *pos_80, const char *pos_70, const char *pos_60,
+                                     const char *pos_50, const char *pos_40, const char *pos_30,
+                                     const char *pos_20) {
+    ck_assert(pos_80 < pos_70);
+    ck_assert(pos_70 < pos_60);
+    ck_assert(pos_60 < pos_50);
+    ck_assert(pos_50 < pos_40);
+    ck_assert(pos_40 < pos_30);
+    ck_assert(pos_30 < pos_20);
+}
+
+static void verify_rotated_tree_positions(const char *buffer_data) {
+    const char *pos_80 = strstr(buffer_data, "80\n");
+    const char *pos_70 = strstr(buffer_data, "70\n");
+    const char *pos_60 = strstr(buffer_data, "60\n");
+    const char *pos_50 = strstr(buffer_data, "50\n");
+    const char *pos_40 = strstr(buffer_data, "40\n");
+    const char *pos_30 = strstr(buffer_data, "30\n");
+    const char *pos_20 = strstr(buffer_data, "20\n");
+
+    check_positions_nonnull(pos_80, pos_70, pos_60, pos_50, pos_40, pos_30, pos_20);
+    check_positions_ordering(pos_80, pos_70, pos_60, pos_50, pos_40, pos_30, pos_20);
+}
+
+START_TEST(test_print_rotated_balanced_int_tree) {
+    BSTTree *tree = bst_create(compare_ints, print_int_to_buffer);
+    int values[] = {50, 30, 70, 20, 40, 60, 80};
+
+    for (size_t i = 0; i < sizeof(values) / sizeof(values[0]); i++) {
+        bst_insert(tree, &values[i]);
+    }
+
+    OutputBuffer buffer;
+    ck_assert_int_eq(output_buffer_init(&buffer, 256), 1);
+    g_output_buffer = &buffer;
+    bst_print_rotated(tree, 0);
+    g_output_buffer = NULL;
+
+    ck_assert_ptr_nonnull(buffer.data);
+    printf("%s", buffer.data);
+
+    verify_rotated_tree_positions(buffer.data);
+
+    output_buffer_free(&buffer);
+    bst_delete(tree);
+}
+
 // Test: Remove leaf node
 START_TEST(test_remove_leaf) {
-    BSTTree *tree = bst_create(compare_strings);
+    BSTTree *tree = bst_create(compare_strings, print_string);
     bst_insert(tree, (void *)"Dublin");
     bst_insert(tree, (void *)"Cork");
     bst_insert(tree, (void *)"Galway");
@@ -182,13 +405,13 @@ START_TEST(test_remove_leaf) {
     ck_assert_ptr_null(found);
     ck_assert_uint_eq(bst_count_nodes(tree), 2);
 
-    bst_delete(tree, NULL);
+    bst_delete(tree);
 }
 END_TEST
 
 // Test: Remove node with one child
 START_TEST(test_remove_one_child) {
-    BSTTree *tree = bst_create(compare_strings);
+    BSTTree *tree = bst_create(compare_strings, print_string);
     bst_insert(tree, (void *)"Lisbon");
     bst_insert(tree, (void *)"Porto");
     bst_insert(tree, (void *)"Sintra");
@@ -199,13 +422,13 @@ START_TEST(test_remove_one_child) {
     ck_assert_ptr_null(found);
     ck_assert_ptr_nonnull(bst_search(tree, (void *)"Sintra"));
 
-    bst_delete(tree, NULL);
+    bst_delete(tree);
 }
 END_TEST
 
 // Test: Remove node with two children
 START_TEST(test_remove_two_children) {
-    BSTTree *tree = bst_create(compare_strings);
+    BSTTree *tree = bst_create(compare_strings, print_string);
     bst_insert(tree, (void *)"Milan");
     bst_insert(tree, (void *)"Florence");
     bst_insert(tree, (void *)"Venice");
@@ -219,33 +442,33 @@ START_TEST(test_remove_two_children) {
     ck_assert_ptr_nonnull(bst_search(tree, (void *)"Florence"));
     ck_assert_ptr_nonnull(bst_search(tree, (void *)"Venice"));
 
-    bst_delete(tree, NULL);
+    bst_delete(tree);
 }
 END_TEST
 
 // Test: Remove root node
 START_TEST(test_remove_root) {
-    BSTTree *tree = bst_create(compare_strings);
+    BSTTree *tree = bst_create(compare_strings, print_string);
     bst_insert(tree, (void *)"Warsaw");
     bst_remove(tree, (void *)"Warsaw");
 
     ck_assert_uint_eq(bst_count_nodes(tree), 0);
-    bst_delete(tree, NULL);
+    bst_delete(tree);
 }
 END_TEST
 
 // Test: Remove from empty tree
 START_TEST(test_remove_empty) {
-    BSTTree *tree = bst_create(compare_strings);
+    BSTTree *tree = bst_create(compare_strings, print_string);
     bst_remove(tree, (void *)"Barcelona");
     ck_assert_uint_eq(bst_count_nodes(tree), 0);
-    bst_delete(tree, NULL);
+    bst_delete(tree);
 }
 END_TEST
 
 // Test: Remove non-existing city
 START_TEST(test_remove_not_found) {
-    BSTTree *tree = bst_create(compare_strings);
+    BSTTree *tree = bst_create(compare_strings, print_string);
     bst_insert(tree, (void *)"Helsinki");
     bst_insert(tree, (void *)"Turku");
 
@@ -253,34 +476,34 @@ START_TEST(test_remove_not_found) {
 
     ck_assert_uint_eq(bst_count_nodes(tree), 2);
 
-    bst_delete(tree, NULL);
+    bst_delete(tree);
 }
 END_TEST
 
 // Test: Height of empty tree
 START_TEST(test_height_empty) {
-    BSTTree *tree = bst_create(compare_strings);
+    BSTTree *tree = bst_create(compare_strings, print_string);
     int height = bst_height(tree);
     ck_assert_int_eq(height, -1);
-    bst_delete(tree, NULL);
+    bst_delete(tree);
 }
 END_TEST
 
 // Test: Height of single node
 START_TEST(test_height_single) {
-    BSTTree *tree = bst_create(compare_strings);
+    BSTTree *tree = bst_create(compare_strings, print_string);
     bst_insert(tree, (void *)"Zurich");
 
     int height = bst_height(tree);
     ck_assert_int_eq(height, 0);
 
-    bst_delete(tree, NULL);
+    bst_delete(tree);
 }
 END_TEST
 
 // Test: Height of balanced tree
 START_TEST(test_height_balanced) {
-    BSTTree *tree = bst_create(compare_strings);
+    BSTTree *tree = bst_create(compare_strings, print_string);
     bst_insert(tree, (void *)"Geneva");
     bst_insert(tree, (void *)"Basel");
     bst_insert(tree, (void *)"Lausanne");
@@ -288,13 +511,13 @@ START_TEST(test_height_balanced) {
     int height = bst_height(tree);
     ck_assert_int_eq(height, 1);
 
-    bst_delete(tree, NULL);
+    bst_delete(tree);
 }
 END_TEST
 
 // Test: Height of unbalanced tree
 START_TEST(test_height_unbalanced) {
-    BSTTree *tree = bst_create(compare_strings);
+    BSTTree *tree = bst_create(compare_strings, print_string);
     bst_insert(tree, (void *)"A");
     bst_insert(tree, (void *)"B");
     bst_insert(tree, (void *)"C");
@@ -303,22 +526,22 @@ START_TEST(test_height_unbalanced) {
     int height = bst_height(tree);
     ck_assert_int_eq(height, 3);
 
-    bst_delete(tree, NULL);
+    bst_delete(tree);
 }
 END_TEST
 
 // Test: Count nodes in empty tree
 START_TEST(test_count_empty) {
-    BSTTree *tree = bst_create(compare_strings);
+    BSTTree *tree = bst_create(compare_strings, print_string);
     size_t count = bst_count_nodes(tree);
     ck_assert_uint_eq(count, 0);
-    bst_delete(tree, NULL);
+    bst_delete(tree);
 }
 END_TEST
 
 // Test: Count nodes in tree
 START_TEST(test_count_nodes) {
-    BSTTree *tree = bst_create(compare_strings);
+    BSTTree *tree = bst_create(compare_strings, print_string);
     bst_insert(tree, (void *)"Lyon");
     bst_insert(tree, (void *)"Marseille");
     bst_insert(tree, (void *)"Nice");
@@ -328,13 +551,13 @@ START_TEST(test_count_nodes) {
     size_t count = bst_count_nodes(tree);
     ck_assert_uint_eq(count, 5);
 
-    bst_delete(tree, NULL);
+    bst_delete(tree);
 }
 END_TEST
 
 // Test: Complex operations sequence
 START_TEST(test_complex_operations) {
-    BSTTree *tree = bst_create(compare_strings);
+    BSTTree *tree = bst_create(compare_strings, print_string);
 
     // Insert cities
     bst_insert(tree, (void *)"Madrid");
@@ -363,13 +586,13 @@ START_TEST(test_complex_operations) {
     bst_remove(tree, (void *)"Zaragoza");
     ck_assert_uint_eq(bst_count_nodes(tree), 2);
 
-    bst_delete(tree, NULL);
+    bst_delete(tree);
 }
 END_TEST
 
 // Test: Alphabetical ordering
 START_TEST(test_alphabetical_order) {
-    BSTTree *tree = bst_create(compare_strings);
+    BSTTree *tree = bst_create(compare_strings, print_string);
     bst_insert(tree, (void *)"Munich");
     bst_insert(tree, (void *)"Berlin");
     bst_insert(tree, (void *)"Hamburg");
@@ -377,26 +600,26 @@ START_TEST(test_alphabetical_order) {
     bst_insert(tree, (void *)"Cologne");
 
     // Check that Berlin (alphabetically first) is the minimum
-    const void *min = bst_find_min(tree);
+    const void *min = bst_get_min(tree);
     ck_assert_str_eq((const char *)min, "Berlin");
 
     // Verify all cities are still accessible
     ck_assert_ptr_nonnull(bst_search(tree, (void *)"Munich"));
     ck_assert_ptr_nonnull(bst_search(tree, (void *)"Hamburg"));
 
-    bst_delete(tree, NULL);
+    bst_delete(tree);
 }
 END_TEST
 
 // Test: Delete tree
 START_TEST(test_delete_tree) {
-    BSTTree *tree = bst_create(compare_strings);
+    BSTTree *tree = bst_create(compare_strings, print_string);
     bst_insert(tree, (void *)"Bern");
     bst_insert(tree, (void *)"Geneva");
     bst_insert(tree, (void *)"Basel");
 
     // Delete should free all memory without crashing
-    bst_delete(tree, NULL);
+    bst_delete(tree);
     // If we reach here, deletion succeeded
 }
 END_TEST
@@ -404,7 +627,33 @@ END_TEST
 // Test: Delete NULL tree
 START_TEST(test_delete_null_tree) {
     // Should not crash
-    bst_delete(NULL, NULL);
+    bst_delete(NULL);
+}
+END_TEST
+
+// Test: Integer data type support
+START_TEST(test_insert_search_ints) {
+    BSTTree *tree = bst_create(compare_ints, print_int);
+    // Using a local variable is okay since we will only use it in this scope
+    const int values[] = {42, 7, 19, 100, 3};
+
+    for (size_t i = 0; i < sizeof(values) / sizeof(values[0]); i++) {
+        ck_assert_int_eq(bst_insert(tree, &values[i]), 0);
+    }
+
+    const int search_value = 19;
+    const void *p_found = bst_search(tree, &search_value);
+    ck_assert_ptr_nonnull(p_found);
+    const int found = *(const int *)p_found;
+    ck_assert_int_eq(found, search_value);
+
+    const int expected_min = 3;
+    const void *p_min = bst_get_min(tree);
+    ck_assert_ptr_nonnull(p_min);
+    const int min = *(const int *)p_min;
+    ck_assert_int_eq(min, expected_min);
+
+    bst_delete(tree);
 }
 END_TEST
 
@@ -414,9 +663,11 @@ Suite *bst_suite(void) {
     TCase *tc_init;
     TCase *tc_insert;
     TCase *tc_search;
+    TCase *tc_print;
     TCase *tc_remove;
     TCase *tc_metrics;
     TCase *tc_complex;
+    TCase *tc_types;
 
     s = suite_create("BST");
 
@@ -442,7 +693,16 @@ Suite *bst_suite(void) {
     tcase_add_test(tc_search, test_search_null);
     tcase_add_test(tc_search, test_find_min);
     tcase_add_test(tc_search, test_find_min_empty);
+    tcase_add_test(tc_search, test_find_max);
+    tcase_add_test(tc_search, test_find_max_empty);
     suite_add_tcase(s, tc_search);
+
+    // Print operations test case
+    tc_print = tcase_create("Print Operations");
+    tcase_add_test(tc_print, test_print_inorder_output);
+    tcase_add_test(tc_print, test_print_rotated_output);
+    tcase_add_test(tc_print, test_print_rotated_balanced_int_tree);
+    suite_add_tcase(s, tc_print);
 
     // Remove operations test case
     tc_remove = tcase_create("Remove Operations");
@@ -471,6 +731,11 @@ Suite *bst_suite(void) {
     tcase_add_test(tc_complex, test_delete_tree);
     tcase_add_test(tc_complex, test_delete_null_tree);
     suite_add_tcase(s, tc_complex);
+
+    // Data type coverage test case
+    tc_types = tcase_create("Data Types");
+    tcase_add_test(tc_types, test_insert_search_ints);
+    suite_add_tcase(s, tc_types);
 
     return s;
 }

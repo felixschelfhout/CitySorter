@@ -49,5 +49,5 @@ target_include_directories(citysorter PRIVATE ${PROJECT_SOURCE_DIR}/include)
 target_include_directories(citysorter PRIVATE ${EXTRA_INCLUDES})
 
 # Test the Application
-include(cmake/CliTest.cmake)
+include(tests/e2e/CliTest.cmake)
 

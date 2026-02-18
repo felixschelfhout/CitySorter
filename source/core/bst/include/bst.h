@@ -46,7 +46,7 @@
  * }
  *
  * // Create and populate the tree
- * BSTTree *tree = bst_create(compare_ints);
+ * BSTTree *tree = bst_create(compare_ints, print_int);
  * bst_insert(tree, (void *)&my_int);
  * bst_insert(tree, (void *)&another_int);
  *
@@ -58,7 +58,7 @@
  * }
  *
  * // Display sorted data
- * bst_print_inorder(tree, print_int);
+ * bst_print_inorder(tree);
  *
  * // Cleanup
  * bst_delete(tree, NULL);
@@ -92,6 +92,7 @@
  * @return negative if a < b, 0 if a == b, positive if a > b
  */
 typedef int (*bst_compare_fn)(const void *a, const void *b);
+typedef void (*print_fn)(const void *data);
 
 /**
  * @brief Opaque Binary Search Tree structure
@@ -104,9 +105,16 @@ typedef struct BSTTree BSTTree;
 /**
  * Create a new BST with a given comparison function
  * @param compare Comparison function for ordering data in the tree
+ * @param print Print function for data visualization (optional)
  * @return Pointer to the newly created tree, or NULL on failure
  */
-BSTTree *bst_create(bst_compare_fn compare);
+BSTTree *bst_create(bst_compare_fn compare, print_fn print);
+
+/**
+ * Delete the entire BST and free all memory for nodes
+ * @param tree Pointer to the BST
+ */
+void bst_delete(BSTTree *tree);
 
 /**
  * Insert data into the BST
@@ -115,6 +123,14 @@ BSTTree *bst_create(bst_compare_fn compare);
  * @return true if insertion was successful, false if data already exists or error
  */
 int bst_insert(BSTTree *tree, const void *data);
+
+/**
+ * Remove data from the BST
+ * @param tree Pointer to the BST
+ * @param data The data pointer to remove
+ * @return true if removal was successful, false if data not found
+ */
+int bst_remove(BSTTree *tree, const void *data);
 
 /**
  * Search for data in the BST
@@ -131,37 +147,28 @@ const void *bst_search(BSTTree *tree, const void *data);
  * @return Constant pointer to the data with the minimum value, NULL if tree is empty
  *         The returned pointer is const to prevent accidental modification
  */
-const void *bst_find_min(BSTTree *tree);
+const void *bst_get_min(BSTTree *tree);
 
 /**
- * Remove data from the BST
+ * Find the maximum value in the BST (rightmost node, read-only)
  * @param tree Pointer to the BST
- * @param data The data pointer to remove
- * @return true if removal was successful, false if data not found
+ * @return Constant pointer to the data with the maximum value, NULL if tree is empty
+ *         The returned pointer is const to prevent accidental modification
  */
-int bst_remove(BSTTree *tree, const void *data);
+const void *bst_get_max(BSTTree *tree);
 
 /**
- * Print the BST in in-order traversal using a print function
+ * Print the BST in in-order traversal using the tree's print function
  * @param tree Pointer to the BST
- * @param print Function to print individual data elements
  */
-void bst_print_inorder(BSTTree *tree, void (*print)(const void *));
+void bst_print_inorder(BSTTree *tree);
 
 /**
  * Print the BST in a rotated format (right → root → left) for visualization
  * @param tree Pointer to the BST
  * @param space Spacing for indentation (use 0 initially)
- * @param print Function to print individual data elements
  */
-void bst_print_rotated(BSTTree *tree, int space, void (*print)(const void *));
-
-/**
- * Delete the entire BST and free all memory for nodes
- * @param tree Pointer to the BST
- * @param free_data Function to free individual data elements, or NULL if data is static
- */
-void bst_delete(BSTTree *tree, void (*free_data)(void *));
+void bst_print_rotated(BSTTree *tree, int space);
 
 /**
  * Get the height of the BST
