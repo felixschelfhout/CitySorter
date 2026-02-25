@@ -92,7 +92,11 @@
  * @return negative if a < b, 0 if a == b, positive if a > b
  */
 typedef int (*bst_compare_fn)(const void *a, const void *b);
-typedef void (*print_fn)(const void *data);
+/**
+ * Callback function type for node retrieval operations
+ * @param data The data pointer of the retrieved node
+ */
+typedef void (*node_retrieved_cb)(const void *data);
 
 /**
  * @brief Opaque Binary Search Tree structure
@@ -105,10 +109,10 @@ typedef struct BSTTree BSTTree;
 /**
  * Create a new BST with a given comparison function
  * @param compare Comparison function for ordering data in the tree
- * @param print Print function for data visualization (optional)
+ * @param node_retrieved_cb Callback function invoked when a node is retrieved
  * @return Pointer to the newly created tree, or NULL on failure
  */
-BSTTree *bst_create(bst_compare_fn compare, print_fn print);
+BSTTree *bst_create(bst_compare_fn compare, node_retrieved_cb node_retrieved_cb);
 
 /**
  * Delete the entire BST and free all memory for nodes
@@ -158,17 +162,12 @@ const void *bst_get_min(BSTTree *tree);
 const void *bst_get_max(BSTTree *tree);
 
 /**
- * Print the BST in in-order traversal using the tree's print function
+ * Calls the registered retrieve function for each node starting with the 
+ * rightmost node (highest) and ending with the leftmost (lowest) node. 
+ * 
  * @param tree Pointer to the BST
  */
-void bst_print_inorder(BSTTree *tree);
-
-/**
- * Print the BST in a rotated format (right → root → left) for visualization
- * @param tree Pointer to the BST
- * @param space Spacing for indentation (use 0 initially)
- */
-void bst_print_rotated(BSTTree *tree, int space);
+void bst_retrieve_high_low(BSTTree *tree);
 
 /**
  * Get the height of the BST

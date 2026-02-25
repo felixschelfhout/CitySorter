@@ -73,6 +73,11 @@ static void output_buffer_free(OutputBuffer *buffer) {
     buffer->capacity = 0;
 }
 
+/**
+ * Author's note:
+ * I don't like the use of realloc here, but I let it slide for the sake of testing. 
+ * In production code, I would likely use a different approach to manage the buffer size more efficiently.
+ */
 static int output_buffer_append(OutputBuffer *buffer, const char *text) {
     size_t len = strlen(text);
     if (buffer->size + len + 1 > buffer->capacity) {
@@ -285,8 +290,8 @@ START_TEST(test_find_max_empty) {
 }
 END_TEST
 
-// Test: Print inorder output
-START_TEST(test_print_inorder_output) {
+// Test: Print output
+START_TEST(test_bst_retrieve_high_low) {
     BSTTree *tree = bst_create(compare_strings, print_string_to_buffer);
     bst_insert(tree, (void *)"B");
     bst_insert(tree, (void *)"A");
@@ -295,35 +300,20 @@ START_TEST(test_print_inorder_output) {
     OutputBuffer buffer;
     ck_assert_int_eq(output_buffer_init(&buffer, 32), 1);
     g_output_buffer = &buffer;
-    bst_print_inorder(tree);
+    bst_retrieve_high_low(tree);
     g_output_buffer = NULL;
 
-    ck_assert_str_eq(buffer.data, "A\nB\nC\n");
-
-    output_buffer_free(&buffer);
-    bst_delete(tree);
-}
-END_TEST
-
-// Test: Print rotated output
-START_TEST(test_print_rotated_output) {
-    BSTTree *tree = bst_create(compare_strings, print_string_to_buffer);
-    bst_insert(tree, (void *)"B");
-    bst_insert(tree, (void *)"A");
-    bst_insert(tree, (void *)"C");
-
-    OutputBuffer buffer;
-    ck_assert_int_eq(output_buffer_init(&buffer, 32), 1);
-    g_output_buffer = &buffer;
-    bst_print_rotated(tree, 0);
-    g_output_buffer = NULL;
-
+    // Find position of each expected element
     char *pos_c = strstr(buffer.data, "C\n");
     char *pos_b = strstr(buffer.data, "B\n");
     char *pos_a = strstr(buffer.data, "A\n");
+
+    // Verify all elements were found
     ck_assert_ptr_nonnull(pos_c);
     ck_assert_ptr_nonnull(pos_b);
     ck_assert_ptr_nonnull(pos_a);
+
+    // Verify all elements were printed in the correct order (C at top, A at bottom)
     ck_assert(pos_c < pos_b);
     ck_assert(pos_b < pos_a);
 
@@ -357,6 +347,7 @@ static void check_positions_ordering(const char *pos_80, const char *pos_70, con
 }
 
 static void verify_rotated_tree_positions(const char *buffer_data) {
+    // Find position of each expected element
     const char *pos_80 = strstr(buffer_data, "80\n");
     const char *pos_70 = strstr(buffer_data, "70\n");
     const char *pos_60 = strstr(buffer_data, "60\n");
@@ -365,11 +356,14 @@ static void verify_rotated_tree_positions(const char *buffer_data) {
     const char *pos_30 = strstr(buffer_data, "30\n");
     const char *pos_20 = strstr(buffer_data, "20\n");
 
+    // Verify all elements were found
     check_positions_nonnull(pos_80, pos_70, pos_60, pos_50, pos_40, pos_30, pos_20);
+
+    // Verify all elements were printed in the correct order (80 at top, 20 at bottom)
     check_positions_ordering(pos_80, pos_70, pos_60, pos_50, pos_40, pos_30, pos_20);
 }
 
-START_TEST(test_print_rotated_balanced_int_tree) {
+START_TEST(test_bst_retrieve_high_low_int) {
     BSTTree *tree = bst_create(compare_ints, print_int_to_buffer);
     int values[] = {50, 30, 70, 20, 40, 60, 80};
 
@@ -377,12 +371,16 @@ START_TEST(test_print_rotated_balanced_int_tree) {
         bst_insert(tree, &values[i]);
     }
 
+    // Retrieve all values of the tree by printing them into a char buffer
+    // this implementation serves as an example of a print function installed as retrieve callback.
+    // (Technically we could have verified the order of each node without first printing to a buffer)
     OutputBuffer buffer;
     ck_assert_int_eq(output_buffer_init(&buffer, 256), 1);
     g_output_buffer = &buffer;
-    bst_print_rotated(tree, 0);
+    bst_retrieve_high_low(tree);
     g_output_buffer = NULL;
 
+    // Verify the char buffer
     ck_assert_ptr_nonnull(buffer.data);
     printf("%s", buffer.data);
 
@@ -699,9 +697,8 @@ Suite *bst_suite(void) {
 
     // Print operations test case
     tc_print = tcase_create("Print Operations");
-    tcase_add_test(tc_print, test_print_inorder_output);
-    tcase_add_test(tc_print, test_print_rotated_output);
-    tcase_add_test(tc_print, test_print_rotated_balanced_int_tree);
+    tcase_add_test(tc_print, test_bst_retrieve_high_low);
+    tcase_add_test(tc_print, test_bst_retrieve_high_low_int);
     suite_add_tcase(s, tc_print);
 
     // Remove operations test case
