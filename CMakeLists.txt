@@ -22,6 +22,10 @@ list(APPEND EXTRA_INCLUDES ${PROJECT_BINARY_DIR}/include)
 add_subdirectory(source/core/bst)
 list(APPEND EXTRA_LIBS BinarySearchTree)
 
+# Configure the Cities model library
+add_subdirectory(source/models/cities)
+list(APPEND EXTRA_LIBS Cities)
+
 # Create Application
 add_executable(citysorter)
 
@@ -32,9 +36,6 @@ target_sources(citysorter PRIVATE source/cli/main.c)
 ## https://github.com/Kitware/CMake/blob/master/Modules/FindCURL.cmake 
 find_package(CURL 8.5.0 REQUIRED COMPONENTS HTTPS SSL) 
 target_link_libraries(citysorter CURL::libcurl)
-## /usr/lib/x86_64-linux-gnu/cmake/cJSON/cJSONConfig.cmake
-find_package(cJSON 1.7.17 REQUIRED) 
-target_link_libraries(citysorter ${CJSON_LIBRARY})
 ## Local libraries
 target_link_libraries(citysorter ${EXTRA_LIBS})
 
