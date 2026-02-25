@@ -75,8 +75,9 @@ static void output_buffer_free(OutputBuffer *buffer) {
 
 /**
  * Author's note:
- * I don't like the use of realloc here, but I let it slide for the sake of testing. 
- * In production code, I would likely use a different approach to manage the buffer size more efficiently.
+ * I don't like the use of realloc here, but I let it slide for the sake of testing.
+ * In production code, I would likely use a different approach to manage the buffer size more
+ * efficiently.
  */
 static int output_buffer_append(OutputBuffer *buffer, const char *text) {
     size_t len = strlen(text);
@@ -373,7 +374,8 @@ START_TEST(test_bst_retrieve_high_low_int) {
 
     // Retrieve all values of the tree by printing them into a char buffer
     // this implementation serves as an example of a print function installed as retrieve callback.
-    // (Technically we could have verified the order of each node without first printing to a buffer)
+    // (Technically we could have verified the order of each node without first printing to a
+    // buffer)
     OutputBuffer buffer;
     ck_assert_int_eq(output_buffer_init(&buffer, 256), 1);
     g_output_buffer = &buffer;

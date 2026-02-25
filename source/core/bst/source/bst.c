@@ -92,7 +92,7 @@ static BSTNode *search_recursive(BSTNode *node, const void *data, bst_compare_fn
 }
 
 /**
- * Remove data from the BST (recursive helper). 
+ * Remove data from the BST (recursive helper).
  * This reorders the tree to maintain the BST properties after deletion.
  */
 static BSTNode *remove_recursive(BSTNode *node, const void *data, bst_compare_fn compare) {
@@ -209,7 +209,8 @@ static size_t count_nodes_recursive(BSTNode *node) {
  * Get the width of the BST by tracking horizontal distances (recursive helper)
  * Walks the entire tree and tracks min/max horizontal positions from root
  */
-static void width_recursive_helper(BSTNode *node, int distance, int *min_distance, int *max_distance) {
+static void width_recursive_helper(BSTNode *node, int distance, int *min_distance,
+                                   int *max_distance) {
     if (node == NULL) {
         return;
     }
@@ -335,7 +336,7 @@ int bst_remove(BSTTree *tree, const void *data) {
     if (!tree || !data) {
         return 0;
     }
-    
+
     const BSTNode *old_root_node = tree->root_node;
     tree->root_node = remove_recursive(tree->root_node, data, tree->compare);
     return old_root_node != tree->root_node ||
@@ -343,7 +344,7 @@ int bst_remove(BSTTree *tree, const void *data) {
 }
 
 /**
- * Calls the registered callback for each node starting with the 
+ * Calls the registered callback for each node starting with the
  * rightmost node (highest) and ending with the leftmost (lowest) node.
  */
 void bst_retrieve_data_high_to_low(BSTTree *tree) {

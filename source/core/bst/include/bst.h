@@ -162,9 +162,9 @@ const void *bst_get_min(BSTTree *tree);
 const void *bst_get_max(BSTTree *tree);
 
 /**
- * Calls the registered data_retrieved_cb function for each node of the tree, starting with the 
- * rightmost node (highest) and ending with the leftmost (lowest) node. 
- * 
+ * Calls the registered data_retrieved_cb function for each node of the tree, starting with the
+ * rightmost node (highest) and ending with the leftmost (lowest) node.
+ *
  * @param tree Pointer to the BST
  */
 void bst_retrieve_data_high_to_low(BSTTree *tree);
@@ -179,7 +179,8 @@ int bst_height(BSTTree *tree);
 /**
  * Get the width of the BST
  * @param tree Pointer to the BST
- * @return The horizontal span of the tree (distance from leftmost to rightmost node + 1, 0 for empty tree)
+ * @return The horizontal span of the tree (distance from leftmost to rightmost node + 1, 0 for
+ * empty tree)
  */
 int bst_width(BSTTree *tree);
 
