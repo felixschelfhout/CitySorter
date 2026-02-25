@@ -40,6 +40,7 @@ make citysorter
 ```
 
 # Run the program
+```bash
 ./citysorter
 ```
 
