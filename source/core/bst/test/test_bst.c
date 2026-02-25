@@ -300,7 +300,7 @@ START_TEST(test_bst_retrieve_high_low) {
     OutputBuffer buffer;
     ck_assert_int_eq(output_buffer_init(&buffer, 32), 1);
     g_output_buffer = &buffer;
-    bst_retrieve_high_low(tree);
+    bst_retrieve_data_high_to_low(tree);
     g_output_buffer = NULL;
 
     // Find position of each expected element
@@ -377,7 +377,7 @@ START_TEST(test_bst_retrieve_high_low_int) {
     OutputBuffer buffer;
     ck_assert_int_eq(output_buffer_init(&buffer, 256), 1);
     g_output_buffer = &buffer;
-    bst_retrieve_high_low(tree);
+    bst_retrieve_data_high_to_low(tree);
     g_output_buffer = NULL;
 
     // Verify the char buffer
@@ -523,6 +523,121 @@ START_TEST(test_height_unbalanced) {
 
     int height = bst_height(tree);
     ck_assert_int_eq(height, 3);
+
+    bst_delete(tree);
+}
+END_TEST
+
+// Test: Width of empty tree
+START_TEST(test_width_empty) {
+    BSTTree *tree = bst_create(compare_strings, print_string);
+    int width = bst_width(tree);
+    ck_assert_int_eq(width, 0);
+    bst_delete(tree);
+}
+END_TEST
+
+// Test: Width of single node
+START_TEST(test_width_single) {
+    BSTTree *tree = bst_create(compare_strings, print_string);
+    bst_insert(tree, (void *)"Zurich");
+
+    int width = bst_width(tree);
+    ck_assert_int_eq(width, 1);
+
+    bst_delete(tree);
+}
+END_TEST
+
+// Test: Width of tree with left and right children
+START_TEST(test_width_balanced) {
+    BSTTree *tree = bst_create(compare_strings, print_string);
+    bst_insert(tree, (void *)"Geneva");
+    bst_insert(tree, (void *)"Basel");
+    bst_insert(tree, (void *)"Lausanne");
+
+    // Tree structure:
+    //       Geneva (0)
+    //       /      \
+    //    Basel   Lausanne
+    //    (-1)       (1)
+    // Width: 1 - (-1) + 1 = 3
+    int width = bst_width(tree);
+    ck_assert_int_eq(width, 3);
+
+    bst_delete(tree);
+}
+END_TEST
+
+// Test: Width of tree with only left children
+START_TEST(test_width_left_skewed) {
+    BSTTree *tree = bst_create(compare_strings, print_string);
+    bst_insert(tree, (void *)"D");
+    bst_insert(tree, (void *)"C");
+    bst_insert(tree, (void *)"B");
+    bst_insert(tree, (void *)"A");
+
+    // Tree structure:
+    //       D (0)
+    //       /
+    //      C (-1)
+    //      /
+    //     B (-2)
+    //     /
+    //    A (-3)
+    // Width: 0 - (-3) + 1 = 4
+    int width = bst_width(tree);
+    ck_assert_int_eq(width, 4);
+
+    bst_delete(tree);
+}
+END_TEST
+
+// Test: Width of tree with only right children
+START_TEST(test_width_right_skewed) {
+    BSTTree *tree = bst_create(compare_strings, print_string);
+    bst_insert(tree, (void *)"A");
+    bst_insert(tree, (void *)"B");
+    bst_insert(tree, (void *)"C");
+    bst_insert(tree, (void *)"D");
+
+    // Tree structure:
+    //    A (0)
+    //      \
+    //       B (1)
+    //         \
+    //          C (2)
+    //            \
+    //             D (3)
+    // Width: 3 - 0 + 1 = 4
+    int width = bst_width(tree);
+    ck_assert_int_eq(width, 4);
+
+    bst_delete(tree);
+}
+END_TEST
+
+// Test: Width of complex balanced tree
+START_TEST(test_width_complex) {
+    BSTTree *tree = bst_create(compare_ints, print_int);
+    int values[] = {50, 30, 70, 20, 40, 60, 80};
+
+    for (size_t i = 0; i < sizeof(values) / sizeof(values[0]); i++) {
+        bst_insert(tree, &values[i]);
+    }
+
+    // Tree structure:
+    //            50 (0)
+    //           /     \
+    //         30 (-1)  70 (1)
+    //        /  \      /  \
+    //      20   40   60    80
+    //     (-2) (0)  (0)   (2)
+    // Min position: -2 (node 20)
+    // Max position: 2 (node 80)
+    // Width: 2 - (-2) + 1 = 5
+    int width = bst_width(tree);
+    ck_assert_int_eq(width, 5);
 
     bst_delete(tree);
 }
@@ -717,6 +832,12 @@ Suite *bst_suite(void) {
     tcase_add_test(tc_metrics, test_height_single);
     tcase_add_test(tc_metrics, test_height_balanced);
     tcase_add_test(tc_metrics, test_height_unbalanced);
+    tcase_add_test(tc_metrics, test_width_empty);
+    tcase_add_test(tc_metrics, test_width_single);
+    tcase_add_test(tc_metrics, test_width_balanced);
+    tcase_add_test(tc_metrics, test_width_left_skewed);
+    tcase_add_test(tc_metrics, test_width_right_skewed);
+    tcase_add_test(tc_metrics, test_width_complex);
     tcase_add_test(tc_metrics, test_count_empty);
     tcase_add_test(tc_metrics, test_count_nodes);
     suite_add_tcase(s, tc_metrics);

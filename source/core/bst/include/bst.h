@@ -96,7 +96,7 @@ typedef int (*bst_compare_fn)(const void *a, const void *b);
  * Callback function type for node retrieval operations
  * @param data The data pointer of the retrieved node
  */
-typedef void (*node_retrieved_cb)(const void *data);
+typedef void (*data_retrieved_cb)(const void *data);
 
 /**
  * @brief Opaque Binary Search Tree structure
@@ -109,13 +109,13 @@ typedef struct BSTTree BSTTree;
 /**
  * Create a new BST with a given comparison function
  * @param compare Comparison function for ordering data in the tree
- * @param node_retrieved_cb Callback function invoked when a node is retrieved
+ * @param data_retrieved_cb Callback function invoked when a node is retrieved
  * @return Pointer to the newly created tree, or NULL on failure
  */
-BSTTree *bst_create(bst_compare_fn compare, node_retrieved_cb node_retrieved_cb);
+BSTTree *bst_create(bst_compare_fn compare, data_retrieved_cb data_retrieved_cb);
 
 /**
- * Delete the entire BST and free all memory for nodes
+ * Delete the entire BST without reordering the tree.
  * @param tree Pointer to the BST
  */
 void bst_delete(BSTTree *tree);
@@ -129,7 +129,7 @@ void bst_delete(BSTTree *tree);
 int bst_insert(BSTTree *tree, const void *data);
 
 /**
- * Remove data from the BST
+ * Remove data from the BST and reorder the tree to maintain BST properties.
  * @param tree Pointer to the BST
  * @param data The data pointer to remove
  * @return true if removal was successful, false if data not found
@@ -162,12 +162,12 @@ const void *bst_get_min(BSTTree *tree);
 const void *bst_get_max(BSTTree *tree);
 
 /**
- * Calls the registered retrieve function for each node starting with the 
+ * Calls the registered data_retrieved_cb function for each node of the tree, starting with the 
  * rightmost node (highest) and ending with the leftmost (lowest) node. 
  * 
  * @param tree Pointer to the BST
  */
-void bst_retrieve_high_low(BSTTree *tree);
+void bst_retrieve_data_high_to_low(BSTTree *tree);
 
 /**
  * Get the height of the BST
@@ -175,6 +175,13 @@ void bst_retrieve_high_low(BSTTree *tree);
  * @return The height of the tree (0 for single node, -1 for empty tree)
  */
 int bst_height(BSTTree *tree);
+
+/**
+ * Get the width of the BST
+ * @param tree Pointer to the BST
+ * @return The horizontal span of the tree (distance from leftmost to rightmost node + 1, 0 for empty tree)
+ */
+int bst_width(BSTTree *tree);
 
 /**
  * Get the number of nodes in the BST
