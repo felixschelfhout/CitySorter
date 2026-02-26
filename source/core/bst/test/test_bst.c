@@ -777,17 +777,17 @@ END_TEST
 // Test: Dump tree visualization
 START_TEST(test_dump_tree) {
     BSTTree *tree = bst_create(compare_ints, print_int);
-    
+
     // Create a balanced tree
     const int values[] = {50, 30, 70, 20, 40, 60, 80};
     for (size_t i = 0; i < sizeof(values) / sizeof(values[0]); i++) {
         bst_insert(tree, &values[i]);
     }
-    
+
     printf("\n=== Tree Dump (Balanced 7-node tree) ===\n");
     bst_dump_tree(tree);
     printf("=== End Tree Dump ===\n");
-    
+
     bst_delete(tree);
 }
 END_TEST
@@ -798,7 +798,7 @@ START_TEST(test_dump_empty_tree) {
     printf("\n=== Tree Dump (Empty tree) ===\n");
     bst_dump_tree(tree);
     printf("=== End Tree Dump ===\n");
-    
+
     bst_delete(tree);
 }
 END_TEST
@@ -808,11 +808,11 @@ START_TEST(test_dump_single_node) {
     BSTTree *tree = bst_create(compare_ints, print_int);
     const int value = 42;
     bst_insert(tree, &value);
-    
+
     printf("\n=== Tree Dump (Single node) ===\n");
     bst_dump_tree(tree);
     printf("=== End Tree Dump ===\n");
-    
+
     bst_delete(tree);
 }
 END_TEST

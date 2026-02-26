@@ -26,6 +26,10 @@ list(APPEND EXTRA_LIBS BinarySearchTree)
 add_subdirectory(source/models/cities)
 list(APPEND EXTRA_LIBS Cities)
 
+# Configure the Curl Connector library
+add_subdirectory(source/connectors/curl)
+list(APPEND EXTRA_LIBS CurlConnector)
+
 # Create Application
 add_executable(citysorter)
 
@@ -33,9 +37,6 @@ add_executable(citysorter)
 target_sources(citysorter PRIVATE source/cli/main.c)
 
 # Set Application required libraries
-## https://github.com/Kitware/CMake/blob/master/Modules/FindCURL.cmake 
-find_package(CURL 8.5.0 REQUIRED COMPONENTS HTTPS SSL) 
-target_link_libraries(citysorter CURL::libcurl)
 ## Local libraries
 target_link_libraries(citysorter ${EXTRA_LIBS})
 
