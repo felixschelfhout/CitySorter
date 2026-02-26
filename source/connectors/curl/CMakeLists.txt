@@ -39,3 +39,9 @@ add_test(NAME api_connector_unit_tests COMMAND test_api)
 set_tests_properties(api_connector_unit_tests PROPERTIES
     ENVIRONMENT "CK_FORK=no"
 )
+
+option(CITYSORTER_ENABLE_INTEGRATION_TESTS "Enable API integration tests" OFF)
+
+if (CITYSORTER_ENABLE_INTEGRATION_TESTS)
+    target_compile_definitions(test_api PRIVATE ENABLE_INTEGRATION_TESTS=1)
+endif()

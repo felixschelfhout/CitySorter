@@ -156,13 +156,14 @@ START_TEST(test_response_is_rate_limited) {
 }
 END_TEST
 
+#ifdef ENABLE_INTEGRATION_TESTS
 /* Test: Fetch cities with valid country (integration test) */
 /* NOLINTBEGIN(readability-function-cognitive-complexity) */
 START_TEST(test_fetch_valid_country) {
     api_connector_init();
 
     ApiConfig config = api_config_default();
-    config.timeout_seconds = 15;
+    config.timeout_seconds = 2;
     config.max_retries = 2;
 
     ApiResponse response = {0};
@@ -194,7 +195,7 @@ START_TEST(test_fetch_with_custom_config) {
     api_connector_init();
 
     ApiConfig config;
-    config.timeout_seconds = 5;
+    config.timeout_seconds = 2;
     config.max_retries = 1;
     config.retry_delay_ms = 500;
     config.exponential_backoff = 0;
@@ -217,7 +218,9 @@ START_TEST(test_fetch_nonexistent_country) {
     api_connector_init();
 
     ApiResponse response = {0};
-    api_fetch_cities("Nonexistentcountry", NULL, &response);
+    ApiConfig config = api_config_default();
+    config.timeout_seconds = 2;
+    api_fetch_cities("Nonexistentcountry", &config, &response);
 
     /* API should return some response, possibly with error:true in JSON */
     if (response.http_code == 200) {
@@ -228,6 +231,7 @@ START_TEST(test_fetch_nonexistent_country) {
     api_connector_cleanup();
 }
 END_TEST
+#endif
 
 /* Test Suite Setup */
 Suite *api_connector_suite(void) {
@@ -266,11 +270,13 @@ Suite *api_connector_suite(void) {
     tcase_add_test(tc_fetch, test_fetch_invalid_country);
     tcase_add_test(tc_fetch, test_fetch_null_country);
     tcase_add_test(tc_fetch, test_fetch_empty_country);
+#ifdef ENABLE_INTEGRATION_TESTS
     tcase_add_test(tc_fetch, test_fetch_valid_country);
     tcase_add_test(tc_fetch, test_fetch_with_custom_config);
     tcase_add_test(tc_fetch, test_fetch_nonexistent_country);
     /* Set longer timeout for integration tests that make real API calls */
-    tcase_set_timeout(tc_fetch, 30);
+    tcase_set_timeout(tc_fetch, 10);
+#endif
     suite_add_tcase(s, tc_fetch);
 
     return s;
