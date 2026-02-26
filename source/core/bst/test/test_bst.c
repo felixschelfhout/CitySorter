@@ -384,7 +384,9 @@ START_TEST(test_bst_retrieve_high_low_int) {
 
     // Verify the char buffer
     ck_assert_ptr_nonnull(buffer.data);
+    printf(" === Retrieving data from BST (high to low) ===\n");
     printf("%s", buffer.data);
+    printf("=== End of retrieval ===\n");
 
     verify_rotated_tree_positions(buffer.data);
 
@@ -772,6 +774,49 @@ START_TEST(test_insert_search_ints) {
 }
 END_TEST
 
+// Test: Dump tree visualization
+START_TEST(test_dump_tree) {
+    BSTTree *tree = bst_create(compare_ints, print_int);
+    
+    // Create a balanced tree
+    const int values[] = {50, 30, 70, 20, 40, 60, 80};
+    for (size_t i = 0; i < sizeof(values) / sizeof(values[0]); i++) {
+        bst_insert(tree, &values[i]);
+    }
+    
+    printf("\n=== Tree Dump (Balanced 7-node tree) ===\n");
+    bst_dump_tree(tree);
+    printf("=== End Tree Dump ===\n");
+    
+    bst_delete(tree);
+}
+END_TEST
+
+// Test: Dump empty tree
+START_TEST(test_dump_empty_tree) {
+    BSTTree *tree = bst_create(compare_ints, print_int);
+    printf("\n=== Tree Dump (Empty tree) ===\n");
+    bst_dump_tree(tree);
+    printf("=== End Tree Dump ===\n");
+    
+    bst_delete(tree);
+}
+END_TEST
+
+// Test: Dump single node tree
+START_TEST(test_dump_single_node) {
+    BSTTree *tree = bst_create(compare_ints, print_int);
+    const int value = 42;
+    bst_insert(tree, &value);
+    
+    printf("\n=== Tree Dump (Single node) ===\n");
+    bst_dump_tree(tree);
+    printf("=== End Tree Dump ===\n");
+    
+    bst_delete(tree);
+}
+END_TEST
+
 // Suite creation for Check framework
 Suite *bst_suite(void) {
     Suite *s;
@@ -816,6 +861,9 @@ Suite *bst_suite(void) {
     tc_print = tcase_create("Print Operations");
     tcase_add_test(tc_print, test_bst_retrieve_high_low);
     tcase_add_test(tc_print, test_bst_retrieve_high_low_int);
+    tcase_add_test(tc_print, test_dump_tree);
+    tcase_add_test(tc_print, test_dump_empty_tree);
+    tcase_add_test(tc_print, test_dump_single_node);
     suite_add_tcase(s, tc_print);
 
     // Remove operations test case

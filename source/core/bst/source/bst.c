@@ -1,6 +1,7 @@
 #include "bst.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 // ============================================================================
 // PRIVATE TYPE DEFINITIONS
@@ -395,4 +396,142 @@ size_t bst_count_nodes(BSTTree *tree) {
         return 0;
     }
     return count_nodes_recursive(tree->root_node);
+}
+
+/**
+ * Render a single level of nodes in the tree visualization
+ */
+static void dump_render_nodes(BSTNode **nodes, size_t level_count, size_t width) {
+    char *line = (char *)malloc(width + 1);
+    if (!line) {
+        return;
+    }
+    memset(line, ' ', width);
+    line[width] = '\0';
+
+    size_t segment = width / level_count;
+    for (size_t i = 0; i < level_count; i++) {
+        if (!nodes[i]) {
+            continue;
+        }
+        size_t pos = segment / 2 + segment * i;
+        if (pos < width) {
+            line[pos] = 'o';
+        }
+    }
+
+    printf("%s\n", line);
+    free(line);
+}
+
+/**
+ * Render edges between current and next level in the tree visualization
+ */
+static void dump_render_edges(BSTNode **nodes, size_t level_count, size_t width) {
+    char *edges = (char *)malloc(width + 1);
+    if (!edges) {
+        return;
+    }
+    memset(edges, ' ', width);
+    edges[width] = '\0';
+
+    size_t segment = width / level_count;
+    size_t next_segment = segment / 2;
+    for (size_t i = 0; i < level_count; i++) {
+        const BSTNode *node = nodes[i];
+        size_t parent_pos = segment / 2 + segment * i;
+
+        if (node) {
+            if (node->left) {
+                size_t left_pos = next_segment / 2 + next_segment * (i * 2);
+                size_t edge_pos = (parent_pos + left_pos) / 2;
+                if (edge_pos < width) {
+                    edges[edge_pos] = '/';
+                }
+            }
+            if (node->right) {
+                size_t right_pos = next_segment / 2 + next_segment * (i * 2 + 1);
+                size_t edge_pos = (parent_pos + right_pos) / 2;
+                if (edge_pos < width) {
+                    edges[edge_pos] = '\\';
+                }
+            }
+        }
+    }
+
+    printf("%s\n", edges);
+    free(edges);
+}
+
+/**
+ * Dump the tree shape to stdout using a simple ASCII layout.
+ */
+void bst_dump_tree(BSTTree *tree) {
+    const size_t terminal_width = 120;
+
+    if (!tree || !tree->root_node) {
+        printf("(empty)\n");
+        return;
+    }
+
+    int max_level = height_recursive(tree->root_node);
+    if (max_level < 0) {
+        printf("(empty)\n");
+        return;
+    }
+
+    size_t width = 1;
+    for (int i = 0; i < max_level + 2; i++) {
+        if (width > terminal_width / 2) {
+            printf("...\n");
+            return;
+        }
+        width *= 2;
+    }
+
+    if (width > terminal_width) {
+        printf("...\n");
+        return;
+    }
+
+    size_t level_count = 1;
+    BSTNode **current = (BSTNode **)malloc(level_count * sizeof(BSTNode *));
+    if (!current) {
+        return;
+    }
+    current[0] = tree->root_node;
+
+    for (int level = 0; level <= max_level; level++) {
+        dump_render_nodes(current, level_count, width);
+
+        if (level == max_level) {
+            break;
+        }
+
+        size_t next_count = level_count * 2;
+        BSTNode **next = (BSTNode **)malloc(next_count * sizeof(BSTNode *));
+        if (!next) {
+            free((void *)current);
+            return;
+        }
+        for (size_t i = 0; i < next_count; i++) {
+            next[i] = NULL;
+        }
+
+        dump_render_edges(current, level_count, width);
+
+        // Advance to next level
+        for (size_t i = 0; i < level_count; i++) {
+            if (current[i]) {
+                next[i * 2] = current[i]->left;
+                next[i * 2 + 1] = current[i]->right;
+            }
+        }
+
+        free((void *)current);
+        current = next;
+        level_count = next_count;
+    }
+
+    free((void *)current);
 }

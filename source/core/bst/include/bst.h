@@ -29,7 +29,7 @@
  * - **Const Correctness**: Read-only access to retrieved data
  * - **Core Operations**: Insert, search, traverse and remove data
  * - **Tree Metrics**: Query height and node count
- * - **Flexible Output**: Custom print functions for data visualization
+ * - **Flexible Output**: Custom retrieve functions for sorted data gathering
  *
  * ## Usage Example
  * @code
@@ -40,7 +40,7 @@
  *     return (val_a > val_b) - (val_a < val_b);
  * }
  *
- * // Define a print function for visualization
+ * // Define a retrieve function for each element
  * void print_int(const void *data) {
  *     printf("%d\n", *(const int *)data);
  * }
@@ -190,5 +190,11 @@ int bst_width(BSTTree *tree);
  * @return The number of nodes in the tree
  */
 size_t bst_count_nodes(BSTTree *tree);
+
+/**
+ * Dump the tree shape to stdout using a simple ASCII layout.
+ * @param tree Pointer to the BST
+ */
+void bst_dump_tree(BSTTree *tree);
 
 #endif // BST_H
