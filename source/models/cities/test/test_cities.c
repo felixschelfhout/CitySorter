@@ -37,7 +37,8 @@ END_TEST
 START_TEST(test_validate_valid_city_names) {
     ck_assert_int_eq(cities_validate_city_name("Paris"), 1);
     ck_assert_int_eq(cities_validate_city_name("New York"), 1);
-    ck_assert_int_eq(cities_validate_city_name("São Paulo"), 0); // Special char
+    ck_assert_int_eq(cities_validate_city_name("São Paulo"),
+                     1); // Accented char (valid in real cities)
     ck_assert_int_eq(cities_validate_city_name("Saint-Tropez"), 1);
     ck_assert_int_eq(cities_validate_city_name("O'Fallon"), 1);
 }
@@ -149,6 +150,128 @@ END_TEST
 START_TEST(test_get_city_null_list) {
     const char *city = cities_get(NULL, 0);
     ck_assert_ptr_null(city);
+}
+END_TEST
+
+// Test: Remove city from list
+START_TEST(test_remove_city) {
+    CitiesList *cities = cities_create();
+    cities_add(cities, "Paris");
+    cities_add(cities, "London");
+    cities_add(cities, "Berlin");
+    ck_assert_uint_eq(cities->count, 3);
+
+    int result = cities_remove(cities, "London");
+    ck_assert_int_eq(result, 0);
+    ck_assert_uint_eq(cities->count, 2);
+    ck_assert_str_eq(cities->cities[0], "Paris");
+    ck_assert_str_eq(cities->cities[1], "Berlin");
+
+    cities_free(cities);
+}
+END_TEST
+
+// Test: Remove city that doesn't exist
+START_TEST(test_remove_nonexistent_city) {
+    CitiesList *cities = cities_create();
+    cities_add(cities, "Paris");
+    cities_add(cities, "London");
+
+    int result = cities_remove(cities, "Madrid");
+    ck_assert_int_eq(result, -1);
+    ck_assert_uint_eq(cities->count, 2);
+
+    cities_free(cities);
+}
+END_TEST
+
+// Test: Remove NULL city name
+START_TEST(test_remove_null_city_name) {
+    CitiesList *cities = cities_create();
+    cities_add(cities, "Paris");
+
+    int result = cities_remove(cities, NULL);
+    ck_assert_int_eq(result, -1);
+    ck_assert_uint_eq(cities->count, 1);
+
+    cities_free(cities);
+}
+END_TEST
+
+// Test: Remove from NULL list
+START_TEST(test_remove_from_null_list) {
+    int result = cities_remove(NULL, "Paris");
+    ck_assert_int_eq(result, -1);
+}
+END_TEST
+
+// Test: Remove from empty list
+START_TEST(test_remove_from_empty_list) {
+    CitiesList *cities = cities_create();
+    int result = cities_remove(cities, "Paris");
+    ck_assert_int_eq(result, -1);
+    ck_assert_uint_eq(cities->count, 0);
+
+    cities_free(cities);
+}
+END_TEST
+
+// Test: Remove multiple cities
+START_TEST(test_remove_multiple_cities) {
+    CitiesList *cities = cities_create();
+    cities_add(cities, "Rome");
+    cities_add(cities, "Venice");
+    cities_add(cities, "Milan");
+    cities_add(cities, "Florence");
+    ck_assert_uint_eq(cities->count, 4);
+
+    int result = cities_remove(cities, "Venice");
+    ck_assert_int_eq(result, 0);
+    ck_assert_uint_eq(cities->count, 3);
+
+    result = cities_remove(cities, "Florence");
+    ck_assert_int_eq(result, 0);
+    ck_assert_uint_eq(cities->count, 2);
+    ck_assert_str_eq(cities->cities[0], "Rome");
+    ck_assert_str_eq(cities->cities[1], "Milan");
+
+    cities_free(cities);
+}
+END_TEST
+
+// Test: Remove all cities from list
+START_TEST(test_remove_all_cities) {
+    CitiesList *cities = cities_create();
+    cities_add(cities, "Athens");
+    cities_add(cities, "Barcelona");
+    ck_assert_uint_eq(cities->count, 2);
+
+    int result = cities_remove(cities, "Athens");
+    ck_assert_int_eq(result, 0);
+    ck_assert_uint_eq(cities->count, 1);
+
+    result = cities_remove(cities, "Barcelona");
+    ck_assert_int_eq(result, 0);
+    ck_assert_uint_eq(cities->count, 0);
+
+    cities_free(cities);
+}
+END_TEST
+
+// Test: Remove city with special characters
+START_TEST(test_remove_city_with_special_chars) {
+    CitiesList *cities = cities_create();
+    cities_add(cities, "Saint-Tropez");
+    cities_add(cities, "O'Fallon");
+    cities_add(cities, "New York");
+
+    int result = cities_remove(cities, "O'Fallon");
+    ck_assert_int_eq(result, 0);
+    ck_assert_uint_eq(cities->count, 2);
+    ck_assert_str_eq(cities->cities[0], "Saint-Tropez");
+    ck_assert_str_eq(cities->cities[1], "New York");
+
+    cities_free(cities);
 }
 END_TEST
 
@@ -428,6 +551,17 @@ Suite *cities_suite(void) {
     tcase_add_test(tc_get, test_get_city_out_of_bounds);
     tcase_add_test(tc_get, test_get_city_null_list);
     suite_add_tcase(s, tc_get);
+
+    TCase *tc_remove = tcase_create("Remove");
+    tcase_add_test(tc_remove, test_remove_city);
+    tcase_add_test(tc_remove, test_remove_nonexistent_city);
+    tcase_add_test(tc_remove, test_remove_null_city_name);
+    tcase_add_test(tc_remove, test_remove_from_null_list);
+    tcase_add_test(tc_remove, test_remove_from_empty_list);
+    tcase_add_test(tc_remove, test_remove_multiple_cities);
+    tcase_add_test(tc_remove, test_remove_all_cities);
+    tcase_add_test(tc_remove, test_remove_city_with_special_chars);
+    suite_add_tcase(s, tc_remove);
 
     TCase *tc_parse = tcase_create("Parse");
     tcase_add_test(tc_parse, test_parse_valid_json);

@@ -7,10 +7,23 @@
 
 /**
  * @brief Check if a character is valid in a city name
- * Valid characters: alphanumeric, space, hyphen, apostrophe
+ * Valid characters: Alphanumeric, spaces, and common punctuation used in real city names.
+ * This allows accented characters and hyphens, apostrophes, periods, parentheses, and commas.
+ * Excludes symbols unlikely in city names: @, #, $, %, ^, &, *, +, =, |, \, /, <, >, etc.
  */
 static int is_valid_city_char(unsigned char c) {
-    return isalnum(c) || c == ' ' || c == '-' || c == '\'';
+    /* Control characters are never valid */
+    if (c < 32 || c == 127) {
+        return 0;
+    }
+    /* Definitely invalid symbols */
+    if (c == '@' || c == '#' || c == '$' || c == '%' || c == '^' || c == '&' || c == '*' ||
+        c == '+' || c == '=' || c == '|' || c == '\\' || c == '/' || c == '<' || c == '>' ||
+        c == '?' || c == ':' || c == ';' || c == '"' || c == '`' || c == '~') {
+        return 0;
+    }
+    /* Everything else (letters, numbers, extended ASCII for accents, common punct) is valid */
+    return 1;
 }
 
 /**
@@ -177,6 +190,38 @@ int cities_add(CitiesList *cities, const char *city_name) {
     memcpy(cities->cities[cities->count], city_name, strlen(city_name) + 1);
     cities->count++;
     return 0;
+}
+
+int cities_remove(CitiesList *cities, const char *city_name) {
+    if (!cities || !city_name) {
+        return -1;
+    }
+
+    for (size_t i = 0; i < cities->count; i++) {
+        if (strcmp(cities->cities[i], city_name) == 0) {
+            free(cities->cities[i]);
+
+            for (size_t j = i + 1; j < cities->count; j++) {
+                cities->cities[j - 1] = cities->cities[j];
+            }
+
+            cities->count--;
+            if (cities->count == 0) {
+                free((void *)cities->cities);
+                cities->cities = NULL;
+            } else {
+                char **new_cities =
+                    (char **)realloc((void *)cities->cities, cities->count * sizeof(char *));
+                if (new_cities) {
+                    cities->cities = new_cities;
+                }
+            }
+
+            return 0;
+        }
+    }
+
+    return -1;
 }
 
 const char *cities_get(CitiesList *cities, size_t index) {

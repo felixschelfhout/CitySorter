@@ -63,6 +63,14 @@ int cities_validate_city_name(const char *city_name);
 int cities_add(CitiesList *cities, const char *city_name);
 
 /**
+ * @brief Remove a city from the cities list
+ * @param cities Pointer to the CitiesList
+ * @param city_name The city name to remove
+ * @return 0 on success, -1 if not found or error
+ */
+int cities_remove(CitiesList *cities, const char *city_name);
+
+/**
  * @brief Get city by index
  * @param cities Pointer to the CitiesList
  * @param index The index of the city
