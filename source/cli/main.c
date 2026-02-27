@@ -1,11 +1,30 @@
+/* NOLINTBEGIN(bugprone-reserved-identifier) */
+#define _POSIX_C_SOURCE 200809L
+/* NOLINTEND(bugprone-reserved-identifier) */
+
+#include "api.h"
+#include "bst.h"
+#include "cities.h"
 #include "version.h"
 #include <ctype.h>
+#include <errno.h>
+#include <signal.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define INPUT_MAX 256
 #define CITY_MAX 64
 #define COUNTRY_MAX 64
+#define DEFAULT_COUNTRY "San Marino"
+
+typedef struct {
+    BSTTree *tree;
+    CitiesList *store;
+    ApiConfig api_config;
+} AppState;
+
+static volatile sig_atomic_t g_should_exit = 0;
 
 /**
  * print_version - Display the program version
@@ -28,11 +47,11 @@ void print_help(const char *program_name) {
     printf("  --version    Display version information\n");
     printf("  --help       Display this help message\n");
     printf("\nInteractive commands:\n");
-    printf("  print             Display the BST\n");
-    printf("  add [city]         Add a city\n");
-    printf("  remove [city]      Remove a city\n");
+    printf("  print              Display the BST\n");
+    printf("  add [city]          Add a city\n");
+    printf("  remove [city]       Remove a city\n");
     printf("  travel-to [country] Fetch cities from a country\n");
-    printf("  stop              Exit the program\n");
+    printf("  stop               Exit the program\n");
 }
 
 /**
@@ -127,38 +146,235 @@ static int is_valid_country(const char *country) {
     return 1;
 }
 
-/**
- * handle_stub_print - Stub handler for print command
- */
-static void handle_stub_print(void) {
-    printf("Not implemented: print BST\n");
+static int compare_strings(const void *a, const void *b) {
+    return strcmp((const char *)a, (const char *)b);
 }
 
-/**
- * handle_stub_add - Stub handler for add command
- * @city: City name to add (validated by caller)
- */
-static void handle_stub_add(const char *city) {
-    (void)city;
-    printf("Not implemented: add city\n");
+static void print_city_line(const void *data) {
+    printf("%s\n", (const char *)data);
 }
 
-/**
- * handle_stub_remove - Stub handler for remove command
- * @city: City name to remove (validated by caller)
- */
-static void handle_stub_remove(const char *city) {
-    (void)city;
-    printf("Not implemented: remove city\n");
+static void handle_signal(int signal_number) {
+    (void)signal_number;
+    g_should_exit = 1;
 }
 
-/**
- * handle_stub_travel_to - Stub handler for travel-to command
- * @country: Country name to fetch cities from (validated by caller)
- */
-static void handle_stub_travel_to(const char *country) {
-    (void)country;
-    printf("Not implemented: travel to country\n");
+static void install_signal_handlers(void) {
+    struct sigaction action;
+    memset(&action, 0, sizeof(action));
+    action.sa_handler = handle_signal;
+    sigemptyset(&action.sa_mask);
+    sigaction(SIGINT, &action, NULL);
+    sigaction(SIGTERM, &action, NULL);
+}
+
+static void app_state_cleanup(AppState *state) {
+    if (!state) {
+        return;
+    }
+
+    if (state->tree) {
+        bst_delete(state->tree);
+        state->tree = NULL;
+    }
+
+    if (state->store) {
+        cities_free(state->store);
+        state->store = NULL;
+    }
+}
+
+static int app_state_init(AppState *state) {
+    if (!state) {
+        return -1;
+    }
+
+    state->tree = bst_create(compare_strings, print_city_line);
+    state->store = cities_create();
+    state->api_config = (ApiConfig)API_CONFIG_DEFAULT;
+
+    if (!state->tree || !state->store) {
+        app_state_cleanup(state);
+        return -1;
+    }
+
+    return 0;
+}
+
+static int build_tree_from_list(BSTTree **out_tree, CitiesList **out_store, CitiesList *parsed) {
+    if (!out_tree || !out_store || !parsed) {
+        return -1;
+    }
+
+    BSTTree *tree = bst_create(compare_strings, print_city_line);
+    CitiesList *store = cities_create();
+
+    if (!tree || !store) {
+        if (tree) {
+            bst_delete(tree);
+        }
+        if (store) {
+            cities_free(store);
+        }
+        return -1;
+    }
+
+    for (size_t i = 0; i < parsed->count; i++) {
+        const char *city_name = cities_get(parsed, i);
+        if (!city_name) {
+            continue;
+        }
+
+        if (bst_search(tree, city_name)) {
+            continue;
+        }
+
+        if (cities_add(store, city_name) != 0) {
+            bst_delete(tree);
+            cities_free(store);
+            return -1;
+        }
+
+        const char *stored_city = cities_get(store, store->count - 1);
+        if (!stored_city || bst_insert(tree, stored_city) != 0) {
+            bst_delete(tree);
+            cities_free(store);
+            return -1;
+        }
+    }
+
+    *out_tree = tree;
+    *out_store = store;
+    return 0;
+}
+
+static int load_cities_for_country(AppState *state, const char *country) {
+    ApiResponse response = API_RESPONSE_INIT;
+
+    if (!state || !country) {
+        return -1;
+    }
+
+    if (api_fetch_cities(country, &state->api_config, &response) != 0) {
+        printf("Error: %s\n",
+               response.error_message ? response.error_message : "API request failed");
+        api_response_cleanup(&response);
+        return -1;
+    }
+
+    if (!api_response_is_success(&response)) {
+        printf("Error: API request failed (HTTP %ld)\n", response.http_code);
+        if (response.error_message) {
+            printf("Details: %s\n", response.error_message);
+        }
+        api_response_cleanup(&response);
+        return -1;
+    }
+
+    CitiesList *parsed = cities_parse_json(response.body, country);
+    if (!parsed) {
+        printf("Error: Failed to parse API response.\n");
+        api_response_cleanup(&response);
+        return -1;
+    }
+
+    if (parsed->error_message) {
+        printf("Error: %s\n", parsed->error_message);
+        cities_free(parsed);
+        api_response_cleanup(&response);
+        return -1;
+    }
+
+    BSTTree *new_tree = NULL;
+    CitiesList *new_store = NULL;
+
+    if (build_tree_from_list(&new_tree, &new_store, parsed) != 0) {
+        printf("Error: Failed to build city tree.\n");
+        cities_free(parsed);
+        api_response_cleanup(&response);
+        return -1;
+    }
+
+    cities_free(parsed);
+    api_response_cleanup(&response);
+
+    app_state_cleanup(state);
+    state->tree = new_tree;
+    state->store = new_store;
+
+    printf("Loaded %zu cities for %s.\n", state->store->count, country);
+    return 0;
+}
+
+static void handle_print(AppState *state) {
+    if (!state || !state->tree) {
+        printf("(empty)\n");
+        return;
+    }
+
+    bst_dump_tree(state->tree);
+    bst_retrieve_data_high_to_low(state->tree);
+}
+
+static void handle_add(AppState *state, const char *city) {
+    if (!state) {
+        return;
+    }
+
+    if (!state->tree || !state->store) {
+        if (app_state_init(state) != 0) {
+            printf("Error: Failed to initialize city store.\n");
+            return;
+        }
+    }
+
+    if (bst_search(state->tree, city)) {
+        printf("Error: City already exists.\n");
+        return;
+    }
+
+    if (cities_add(state->store, city) != 0) {
+        printf("Error: Failed to add city.\n");
+        return;
+    }
+
+    const char *stored_city = cities_get(state->store, state->store->count - 1);
+    if (!stored_city || bst_insert(state->tree, stored_city) != 0) {
+        printf("Error: Failed to insert city into tree.\n");
+        return;
+    }
+
+    printf("Added %s.\n", city);
+}
+
+static void handle_remove(AppState *state, const char *city) {
+    if (!state || !state->tree || !state->store) {
+        printf("Error: City store is empty.\n");
+        return;
+    }
+
+    const void *found = bst_search(state->tree, city);
+    if (!found) {
+        printf("Error: City not found.\n");
+        return;
+    }
+
+    if (!bst_remove(state->tree, found)) {
+        printf("Error: Failed to remove city from tree.\n");
+        return;
+    }
+
+    if (cities_remove(state->store, (const char *)found) != 0) {
+        printf("Warning: City removed from tree but not from store.\n");
+    } else {
+        printf("Removed %s.\n", city);
+    }
+}
+
+static void handle_travel_to(AppState *state, const char *country) {
+    if (load_cities_for_country(state, country) != 0) {
+        printf("Travel failed. Keeping current cities.\n");
+    }
 }
 
 /**
@@ -242,20 +458,20 @@ static int validate_country_arg(const char *command, const char *arg) {
 
 /**
  * handle_command - Process and execute a user command
+ * @state: Application state
  * @command: Command name to execute
  * @arg: Argument for the command (may be NULL)
  *
  * Dispatches command to appropriate handler after validation.
- * Handlers are currently stubbed and print "not implemented" messages.
  *
  * Return: 1 to continue CLI loop, 0 to exit (stop command)
  */
-static int handle_command(const char *command, const char *arg) {
+static int handle_command(AppState *state, const char *command, const char *arg) {
     if (strcmp(command, "print") == 0) {
         if (!validate_no_arg("print", arg)) {
             return 1;
         }
-        handle_stub_print();
+        handle_print(state);
         return 1;
     }
 
@@ -263,7 +479,7 @@ static int handle_command(const char *command, const char *arg) {
         if (!validate_city_arg("add", arg)) {
             return 1;
         }
-        handle_stub_add(arg);
+        handle_add(state, arg);
         return 1;
     }
 
@@ -271,7 +487,7 @@ static int handle_command(const char *command, const char *arg) {
         if (!validate_city_arg("remove", arg)) {
             return 1;
         }
-        handle_stub_remove(arg);
+        handle_remove(state, arg);
         return 1;
     }
 
@@ -279,7 +495,7 @@ static int handle_command(const char *command, const char *arg) {
         if (!validate_country_arg("travel-to", arg)) {
             return 1;
         }
-        handle_stub_travel_to(arg);
+        handle_travel_to(state, arg);
         return 1;
     }
 
@@ -314,15 +530,27 @@ static int handle_command(const char *command, const char *arg) {
  * run_cli_loop - Main interactive command loop
  *
  * Reads user input, parses commands, validates arguments, and invokes
- * handlers. Continues until EOF or stop command is received.
+ * handlers. Continues until EOF, signal, or stop command is received.
  */
-static void run_cli_loop(void) {
+static void run_cli_loop(AppState *state) {
     char buffer[INPUT_MAX];
 
-    while (1) {
+    while (!g_should_exit) {
         printf("citysorter> ");
 
         if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
+            if (g_should_exit) {
+                printf("\n");
+                break;
+            }
+            if (feof(stdin)) {
+                printf("\n");
+                break;
+            }
+            if (errno == EINTR) {
+                clearerr(stdin);
+                continue;
+            }
             printf("\n");
             break;
         }
@@ -343,7 +571,7 @@ static void run_cli_loop(void) {
         char *command = NULL;
         char *arg = NULL;
         split_command(input, &command, &arg);
-        if (!handle_command(command, arg)) {
+        if (!handle_command(state, command, arg)) {
             break;
         }
     }
@@ -374,9 +602,31 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    printf("%s %d.%d.%d\n", argv[0], CITYSORTER_VERSION_MAJOR, CITYSORTER_VERSION_MINOR,
-           CITYSORTER_VERSION_PATCH);
-    run_cli_loop();
+    if (api_connector_init() != 0) {
+        fprintf(stderr, "Error: Failed to initialize API connector.\n");
+        return 1;
+    }
+
+    AppState state = {0};
+    if (app_state_init(&state) != 0) {
+        fprintf(stderr, "Error: Failed to initialize application state.\n");
+        api_connector_cleanup();
+        return 1;
+    }
+
+    install_signal_handlers();
+
+    printf("Welcome to CitySorter %d.%d.%d! Type 'help' for a list of commands.\n",
+           CITYSORTER_VERSION_MAJOR, CITYSORTER_VERSION_MINOR, CITYSORTER_VERSION_PATCH);
+
+    if (load_cities_for_country(&state, DEFAULT_COUNTRY) != 0) {
+        printf("Warning: Starting with an empty city tree.\n");
+    }
+
+    run_cli_loop(&state);
+
+    app_state_cleanup(&state);
+    api_connector_cleanup();
 
     return 0;
 }
