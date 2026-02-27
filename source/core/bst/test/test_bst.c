@@ -817,6 +817,50 @@ START_TEST(test_dump_single_node) {
 }
 END_TEST
 
+// Test: Dump tree with truncation (deep binary tree exceeds terminal width)
+START_TEST(test_dump_tree_truncation) {
+    BSTTree *tree = bst_create(compare_ints, print_int);
+
+    // Create a deep balanced tree that will exceed terminal width at some level
+    // A terminal width of 120 can fit about 2^6 = 64 nodes per level
+    // So level 7 (128 nodes) should trigger truncation
+    const int values[] = {64, 32, 96, 16, 48, 80, 112, 8,  24,  40,  56,  72,  88,  104, 120, 4,
+                          12, 20, 28, 36, 44, 52, 60,  68, 76,  84,  92,  100, 108, 116, 124, 2,
+                          6,  10, 14, 18, 22, 26, 30,  34, 38,  42,  46,  50,  54,  58,  62,  66,
+                          70, 74, 78, 82, 86, 90, 94,  98, 102, 106, 110, 114, 118, 122, 126, 1,
+                          3,  5,  7,  9,  11, 13, 15,  17, 19,  21,  23,  25,  27,  29,  31};
+    for (size_t i = 0; i < sizeof(values) / sizeof(values[0]); i++) {
+        bst_insert(tree, &values[i]);
+    }
+
+    printf("\n=== Tree Dump (Deep tree with truncation) ===\n");
+    printf("This tree should print several levels and then truncate with '...'\n");
+    bst_dump_tree(tree);
+    printf("=== End Tree Dump ===\n");
+
+    bst_delete(tree);
+}
+END_TEST
+
+START_TEST(test_dump_tree_unbalanced) {
+    BSTTree *tree = bst_create(compare_ints, print_int);
+
+    // Create an unbalanced tree with insertion order: 20 10 30 19 21 39 22 26 27 23
+    // This creates a tree that leans to the right at various branches
+    const int values[] = {20, 10, 30, 19, 21, 39, 22, 26, 27, 23};
+    for (size_t i = 0; i < sizeof(values) / sizeof(values[0]); i++) {
+        bst_insert(tree, &values[i]);
+    }
+
+    printf("\n=== Tree Dump (Unbalanced tree) ===\n");
+    printf("This tree is unbalanced with specific insertion order\n");
+    bst_dump_tree(tree);
+    printf("=== End Tree Dump ===\n");
+
+    bst_delete(tree);
+}
+END_TEST
+
 // Suite creation for Check framework
 Suite *bst_suite(void) {
     Suite *s;
@@ -864,6 +908,8 @@ Suite *bst_suite(void) {
     tcase_add_test(tc_print, test_dump_tree);
     tcase_add_test(tc_print, test_dump_empty_tree);
     tcase_add_test(tc_print, test_dump_single_node);
+    tcase_add_test(tc_print, test_dump_tree_truncation);
+    tcase_add_test(tc_print, test_dump_tree_unbalanced);
     suite_add_tcase(s, tc_print);
 
     // Remove operations test case

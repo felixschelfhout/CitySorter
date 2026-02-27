@@ -338,10 +338,14 @@ int bst_remove(BSTTree *tree, const void *data) {
         return 0;
     }
 
-    const BSTNode *old_root_node = tree->root_node;
+    // Check if the data exists before removal
+    if (search_recursive(tree->root_node, data, tree->compare) == NULL) {
+        return 0; // Data not found
+    }
+
+    // Data exists, so remove it
     tree->root_node = remove_recursive(tree->root_node, data, tree->compare);
-    return old_root_node != tree->root_node ||
-           (tree->root_node != NULL && tree->compare(data, tree->root_node->data) == 0);
+    return 1; // Successful removal
 }
 
 /**
@@ -399,24 +403,73 @@ size_t bst_count_nodes(BSTTree *tree) {
 }
 
 /**
- * Render a single level of nodes in the tree visualization
+ * Calculate node position based on level and index using spacing patterns
  */
-static void dump_render_nodes(BSTNode **nodes, size_t level_count, size_t width) {
-    char *line = (char *)malloc(width + 1);
+static int calculate_node_position(int level, size_t index) {
+    switch (level) {
+    case 0:
+        return 40; // Center
+    case 1:
+        return (index == 0) ? 21 : 59;
+    case 2:
+        return 11 + (int)index * 20;
+    case 3:
+        return 6 + (int)index * 10;
+    case 4: {
+        // Pairs: spacing 5 within pair, 10 between pair starts
+        int idx = (int)index;
+        int pair = idx / 2;
+        int in_pair = idx % 2;
+        return 3 + pair * 10 + in_pair * 5;
+    }
+    case 5: {
+        // Pairs: spacing 2 within pair, 5 between pair starts
+        int idx = (int)index;
+        int pair = idx / 2;
+        int in_pair = idx % 2;
+        return 1 + pair * 5 + in_pair * 2;
+    }
+    case 6: {
+        // Groups of 4: spacing 5 between group starts
+        int idx = (int)index;
+        int group = idx / 4;
+        int in_group = idx % 4;
+        return group * 5 + in_group;
+    }
+    default:
+        return 0;
+    }
+}
+
+/**
+ * Calculate edge position between parent and child nodes
+ */
+static int calculate_edge_position(int parent_pos, int child_pos) {
+    return (parent_pos + child_pos) / 2;
+}
+
+/**
+ * Render a single level of nodes in the tree visualization using pattern-based positioning
+ */
+static void dump_render_nodes(BSTNode **nodes, size_t level_count, int level) {
+    const size_t terminal_width = 80;
+    char *line = (char *)malloc(terminal_width + 1);
     if (!line) {
         return;
     }
-    memset(line, ' ', width);
-    line[width] = '\0';
+    memset(line, ' ', terminal_width);
+    line[terminal_width] = '\0';
 
-    size_t segment = width / level_count;
-    for (size_t i = 0; i < level_count; i++) {
-        if (!nodes[i]) {
-            continue;
-        }
-        size_t pos = segment / 2 + segment * i;
-        if (pos < width) {
-            line[pos] = 'o';
+    // Calculate positions based on level pattern
+    if (level >= 0 && level < 7) {
+        for (size_t i = 0; i < level_count; i++) {
+            if (!nodes[i]) {
+                continue;
+            }
+            int pos = calculate_node_position(level, i);
+            if (pos >= 0 && (size_t)pos < terminal_width) {
+                line[pos] = 'o';
+            }
         }
     }
 
@@ -425,36 +478,48 @@ static void dump_render_nodes(BSTNode **nodes, size_t level_count, size_t width)
 }
 
 /**
- * Render edges between current and next level in the tree visualization
+ * Helper function to render a single edge character
  */
-static void dump_render_edges(BSTNode **nodes, size_t level_count, size_t width) {
-    char *edges = (char *)malloc(width + 1);
+static void render_edge_char(char *edges, int parent_pos, int child_pos, char edge_char,
+                             size_t terminal_width) {
+    int edge_pos = calculate_edge_position(parent_pos, child_pos);
+    if (edge_pos >= 0 && (size_t)edge_pos < terminal_width) {
+        edges[edge_pos] = edge_char;
+    }
+}
+
+/**
+ * Render edges between current and next level using pattern-based positioning
+ */
+static void dump_render_edges(BSTNode **nodes, size_t level_count, int level) {
+    const size_t terminal_width = 80;
+    char *edges = (char *)malloc(terminal_width + 1);
     if (!edges) {
         return;
     }
-    memset(edges, ' ', width);
-    edges[width] = '\0';
+    memset(edges, ' ', terminal_width);
+    edges[terminal_width] = '\0';
 
-    size_t segment = width / level_count;
-    size_t next_segment = segment / 2;
-    for (size_t i = 0; i < level_count; i++) {
-        const BSTNode *node = nodes[i];
-        size_t parent_pos = segment / 2 + segment * i;
-
-        if (node) {
-            if (node->left) {
-                size_t left_pos = next_segment / 2 + next_segment * (i * 2);
-                size_t edge_pos = (parent_pos + left_pos) / 2;
-                if (edge_pos < width) {
-                    edges[edge_pos] = '/';
-                }
+    // Calculate edge positions based on parent and child node positions
+    if (level >= 0 && level < 6) {
+        for (size_t i = 0; i < level_count; i++) {
+            const BSTNode *node = nodes[i];
+            if (!node) {
+                continue;
             }
+
+            int parent_pos = calculate_node_position(level, i);
+
+            // Left edge
+            if (node->left) {
+                int child_pos = calculate_node_position(level + 1, i * 2);
+                render_edge_char(edges, parent_pos, child_pos, '/', terminal_width);
+            }
+
+            // Right edge
             if (node->right) {
-                size_t right_pos = next_segment / 2 + next_segment * (i * 2 + 1);
-                size_t edge_pos = (parent_pos + right_pos) / 2;
-                if (edge_pos < width) {
-                    edges[edge_pos] = '\\';
-                }
+                int child_pos = calculate_node_position(level + 1, i * 2 + 1);
+                render_edge_char(edges, parent_pos, child_pos, '\\', terminal_width);
             }
         }
     }
@@ -465,9 +530,10 @@ static void dump_render_edges(BSTNode **nodes, size_t level_count, size_t width)
 
 /**
  * Dump the tree shape to stdout using a simple ASCII layout.
+ * Limited to 7 levels (0-6) with hardcoded spacing for terminal width 80.
  */
 void bst_dump_tree(BSTTree *tree) {
-    const size_t terminal_width = 120;
+    const int max_render_level = 6;
 
     if (!tree || !tree->root_node) {
         printf("(empty)\n");
@@ -480,19 +546,12 @@ void bst_dump_tree(BSTTree *tree) {
         return;
     }
 
-    size_t width = 1;
-    for (int i = 0; i < max_level + 2; i++) {
-        if (width > terminal_width / 2) {
-            printf("...\n");
-            return;
-        }
-        width *= 2;
-    }
+    printf("BST has %zu nodes\n", bst_count_nodes(tree));
+    printf("BST height: %d\n", bst_height(tree));
+    printf("BST width: %d\n", bst_width(tree));
 
-    if (width > terminal_width) {
-        printf("...\n");
-        return;
-    }
+    // Limit rendering to max_render_level
+    int render_max_level = (max_level > max_render_level) ? max_render_level : max_level;
 
     size_t level_count = 1;
     BSTNode **current = (BSTNode **)malloc(level_count * sizeof(BSTNode *));
@@ -501,10 +560,14 @@ void bst_dump_tree(BSTTree *tree) {
     }
     current[0] = tree->root_node;
 
-    for (int level = 0; level <= max_level; level++) {
-        dump_render_nodes(current, level_count, width);
+    for (int level = 0; level <= render_max_level; level++) {
+        dump_render_nodes(current, level_count, level);
 
-        if (level == max_level) {
+        if (level == render_max_level) {
+            // Check if there are more levels
+            if (max_level > max_render_level) {
+                printf("...\n");
+            }
             break;
         }
 
@@ -518,7 +581,7 @@ void bst_dump_tree(BSTTree *tree) {
             next[i] = NULL;
         }
 
-        dump_render_edges(current, level_count, width);
+        dump_render_edges(current, level_count, level);
 
         // Advance to next level
         for (size_t i = 0; i < level_count; i++) {
